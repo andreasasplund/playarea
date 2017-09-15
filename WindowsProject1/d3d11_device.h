@@ -1,5 +1,7 @@
 #pragma once
 #define CINTERFACE
+#define COBJMACROS
+
 #include <windows.h>
 
 int initialize_d3d11_device(struct Allocator *allocator, HWND window, struct D3D11Device **d3d11_device);

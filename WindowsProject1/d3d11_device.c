@@ -1,9 +1,8 @@
 #include "d3d11_device.h"
 
-#define COBJMACROS
-
 #include <dxgi.h>
 #include <d3d11.h>
+#include <Unknwnbase.h>
 
 #include "allocator.h"
 
@@ -67,7 +66,7 @@ int initialize_d3d11_device(struct Allocator *allocator, HWND window, struct D3D
 	if (FAILED(hr))
 		return -1;
 
-	unknown_device->lpVtbl->Release(unknown_device);
+	IUnknown_Release(unknown_device);
 
 	return 0;
 }
