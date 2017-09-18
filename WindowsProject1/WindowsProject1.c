@@ -196,6 +196,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
 		not_quit = 0;
         break;
+	case WM_KEYUP:
+		// Able to quit by pressing ESC.
+		if (wParam == 27) {
+			PostQuitMessage(0);
+			not_quit = 0;
+		}
+		break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
