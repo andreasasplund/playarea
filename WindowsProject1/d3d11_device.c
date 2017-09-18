@@ -10,12 +10,20 @@
 typedef struct VertexBuffer
 {
 	ID3D11Buffer *buffer;
-} VertexBuffer_t;
+} VertexBuffer;
+
+typedef struct VertexDeclaration
+{
+	D3D11_INPUT_ELEMENT_DESC *elements;
+} VertexDeclaration;
 
 typedef struct Resources
 {
-	VertexBuffer_t *vertex_buffers;
+	VertexBuffer *vertex_buffers;
 	unsigned *free_vertex_buffers;
+
+	VertexDeclaration *vertex_declarations;
+	unsigned *free_vertex_declarations;
 } Resources_t;
 
 struct D3D11Device
@@ -31,8 +39,10 @@ struct D3D11Device
 	Resources_t resources;
 };
 
-Resource_t allocate_vertex_buffer_handle(struct D3D11Device *device);
-void release_vertex_buffer_handle(struct D3D11Device *device, Resource_t resource);
+Resource allocate_vertex_buffer_handle(struct D3D11Device *device);
+void release_vertex_buffer_handle(struct D3D11Device *device, Resource resource);
+Resource allocate_vertex_declaration_handle(struct D3D11Device *device);
+void release_vertex_declaration_handle(struct D3D11Device *device, Resource resource);
 
 int initialize_d3d11_device(struct Allocator *allocator, HWND window, struct D3D11Device **d3d11_device)
 {
@@ -76,11 +86,17 @@ int initialize_d3d11_device(struct Allocator *allocator, HWND window, struct D3D
 
 
 	device->allocator = allocator;
-	sb_create(allocator, device->resources.vertex_buffers);
-	sb_create(allocator, device->resources.free_vertex_buffers);
-	Resource_t first_vb = allocate_vertex_buffer_handle(device);
+	sb_create(allocator, device->resources.vertex_buffers, 10);
+	sb_create(allocator, device->resources.free_vertex_buffers, 10);
+	Resource first_vb = allocate_vertex_buffer_handle(device);
 	assert(resource_handle(first_vb) == 0);
 	(void)first_vb;
+
+	sb_create(allocator, device->resources.vertex_declarations, 10);
+	sb_create(allocator, device->resources.free_vertex_declarations, 10);
+	Resource first_vd = allocate_vertex_declaration_handle(device);
+	assert(resource_handle(first_vd) == 0);
+	(void)first_vd;
 
 	return 0;
 }
@@ -91,6 +107,7 @@ static ID3D11RenderTargetView *rt_view = 0;
 void shutdown_d3d11_device(struct Allocator *allocator, struct D3D11Device *d3d11_device)
 {
 	release_vertex_buffer_handle(d3d11_device, resource_encode_handle_type(0, RESOURCE_VERTEX_BUFFER));
+	release_vertex_declaration_handle(d3d11_device, resource_encode_handle_type(0, RESOURCE_VERTEX_DECLARATION));
 
 	IDXGISwapChain_Release(d3d11_device->swap_chain);
 	ID3D11Debug_Release(d3d11_device->debug_layer);
@@ -104,6 +121,9 @@ void shutdown_d3d11_device(struct Allocator *allocator, struct D3D11Device *d3d1
 
 	sb_free(d3d11_device->resources.vertex_buffers);
 	sb_free(d3d11_device->resources.free_vertex_buffers);
+
+	sb_free(d3d11_device->resources.vertex_declarations);
+	sb_free(d3d11_device->resources.free_vertex_declarations);
 
 	allocator_realloc(allocator, d3d11_device, 0, 0);
 }
@@ -148,7 +168,7 @@ int d3d11_device_update(struct D3D11Device *device)
 	return 0;
 }
 
-Resource_t allocate_vertex_buffer_handle(struct D3D11Device *device)
+Resource allocate_vertex_buffer_handle(struct D3D11Device *device)
 {
 	if (sb_count(device->resources.free_vertex_buffers)) {
 		unsigned h = sb_last(device->resources.free_vertex_buffers);
@@ -157,25 +177,47 @@ Resource_t allocate_vertex_buffer_handle(struct D3D11Device *device)
 	}
 
 	unsigned h = sb_count(device->resources.vertex_buffers);
-	VertexBuffer_t vertex_buffer = { .buffer = NULL };
+	VertexBuffer vertex_buffer = { .buffer = NULL };
 	sb_push(device->resources.vertex_buffers, vertex_buffer);
 
 	return resource_encode_handle_type(h, RESOURCE_VERTEX_BUFFER);
 }
 
-void release_vertex_buffer_handle(struct D3D11Device *device, Resource_t resource)
+void release_vertex_buffer_handle(struct D3D11Device *device, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_VERTEX_BUFFER);
 	unsigned h = resource_handle(resource);
 	sb_push(device->resources.free_vertex_buffers, h);
 }
 
-VertexBuffer_t *vertex_buffer(struct D3D11Device *device, Resource_t resource)
+Resource allocate_vertex_declaration_handle(struct D3D11Device *device)
+{
+	if (sb_count(device->resources.free_vertex_declarations)) {
+		unsigned h = sb_last(device->resources.free_vertex_declarations);
+		sb_pop(device->resources.free_vertex_declarations);
+		return resource_encode_handle_type(h, RESOURCE_VERTEX_DECLARATION);
+	}
+
+	unsigned h = sb_count(device->resources.vertex_declarations);
+	VertexDeclaration vertex_declaration = { .elements = NULL };
+	sb_push(device->resources.vertex_declarations, vertex_declaration);
+
+	return resource_encode_handle_type(h, RESOURCE_VERTEX_DECLARATION);
+}
+
+void release_vertex_declaration_handle(struct D3D11Device *device, Resource resource)
+{
+	assert(resource_type(resource) == RESOURCE_VERTEX_DECLARATION);
+	unsigned h = resource_handle(resource);
+	sb_push(device->resources.free_vertex_declarations, h);
+}
+
+VertexBuffer *vertex_buffer(struct D3D11Device *device, Resource resource)
 {
 	return &device->resources.vertex_buffers[resource_handle(resource)];
 }
 
-Resource_t create_vertex_buffer(struct D3D11Device *device, void *buffer, unsigned vertices, unsigned stride)
+Resource create_vertex_buffer(struct D3D11Device *device, void *buffer, unsigned vertices, unsigned stride)
 {
 	D3D11_BUFFER_DESC desc;
 	desc.ByteWidth = vertices * stride;
@@ -191,9 +233,9 @@ Resource_t create_vertex_buffer(struct D3D11Device *device, void *buffer, unsign
 	sub_desc.pSysMem = buffer;
 
 	Resources_t *resources = &device->resources;
-	Resource_t vb_res = allocate_vertex_buffer_handle(device);
+	Resource vb_res = allocate_vertex_buffer_handle(device);
 
-	VertexBuffer_t *vb = &resources->vertex_buffers[resource_handle(vb_res)];
+	VertexBuffer *vb = vertex_buffer(device, vb_res);
 
 	HRESULT hr = ID3D11Device_CreateBuffer(device->device, &desc, buffer ? &sub_desc : 0, &vb->buffer);
 	assert(SUCCEEDED(hr));
@@ -201,12 +243,63 @@ Resource_t create_vertex_buffer(struct D3D11Device *device, void *buffer, unsign
 	return vb_res;
 }
 
-void destroy_vertex_buffer(struct D3D11Device *device, Resource_t resource)
+void destroy_vertex_buffer(struct D3D11Device *device, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_VERTEX_BUFFER);
 
-	VertexBuffer_t *vb = vertex_buffer(device, resource);
+	VertexBuffer *vb = vertex_buffer(device, resource);
 	ID3D11Buffer_Release(vb->buffer);
 
 	release_vertex_buffer_handle(device, resource);
+}
+
+VertexDeclaration *vertex_declaration(struct D3D11Device *device, Resource resource)
+{
+	return &device->resources.vertex_declarations[resource_handle(resource)];
+}
+
+Resource create_vertex_declaration(struct D3D11Device *device, VertexElement_t *vertex_elements, unsigned n_vertex_elements)
+{
+	Resources_t *resources = &device->resources;
+	Resource vd_res = allocate_vertex_declaration_handle(device);
+
+	VertexDeclaration *vd = vertex_declaration(device, vd_res);
+
+	sb_create(device->allocator, vd->elements, n_vertex_elements);
+
+	static const char* semantics[] = { "POSITION", "COLOR" };
+	static const DXGI_FORMAT formats[] = { DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT };
+	static unsigned type_size[] = {
+		3 * sizeof(float),
+		4 * sizeof(float),
+	};
+
+	unsigned offset = 0;
+
+	for (unsigned i = 0; i < n_vertex_elements; ++i) {
+		D3D11_INPUT_ELEMENT_DESC element = {
+			.SemanticName = semantics[vertex_elements[i].semantic],
+			.SemanticIndex = 0,
+			.Format = formats[vertex_elements[i].type],
+			.InputSlot = 0,
+			.AlignedByteOffset = offset,
+			.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA,
+			.InstanceDataStepRate = 0,
+		};
+		sb_push(vd->elements, element);
+
+		offset += type_size[vertex_elements[i].type];
+	}
+
+	return vd_res;
+}
+
+void destroy_vertex_declaration(struct D3D11Device *device, Resource resource)
+{
+	assert(resource_type(resource) == RESOURCE_VERTEX_DECLARATION);
+
+	VertexDeclaration *vd = vertex_declaration(device, resource);
+	sb_free(vd->elements);
+
+	release_vertex_declaration_handle(device, resource);
 }

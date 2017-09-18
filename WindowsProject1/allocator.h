@@ -1,8 +1,8 @@
 #pragma once
 
-struct Allocator;
+typedef struct Allocator Allocator;
 
-struct Allocator *create_allocator(void *buffer, unsigned buffer_size);
-void destroy_allocator(struct Allocator *allocator);
+Allocator *create_allocator(void *buffer, unsigned buffer_size);
+void destroy_allocator(Allocator *allocator);
 
-void *allocator_realloc(struct Allocator *allocator, void *p, unsigned size, unsigned alignment);
+void *allocator_realloc(Allocator *allocator, void *p, unsigned size, unsigned alignment);

@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
-struct Allocator
+typedef struct Allocator
 {
 	unsigned allocation_count;
-};
+} Allocator;
 
-struct Allocator *create_allocator(void *buffer, unsigned buffer_size)
+Allocator *create_allocator(void *buffer, unsigned buffer_size)
 {
 	assert(buffer_size >= sizeof(struct Allocator));
 	struct Allocator *allocator = (struct Allocator*)buffer;
@@ -16,12 +16,12 @@ struct Allocator *create_allocator(void *buffer, unsigned buffer_size)
 	return allocator;
 }
 
-void destroy_allocator(struct Allocator *allocator)
+void destroy_allocator(Allocator *allocator)
 {
 	assert(allocator->allocation_count == 0);
 }
 
-void *allocator_realloc(struct Allocator *allocator, void *p, unsigned size, unsigned alignment)
+void *allocator_realloc(Allocator *allocator, void *p, unsigned size, unsigned alignment)
 {
 	if (p && !size) { // Free
 		--allocator->allocation_count;

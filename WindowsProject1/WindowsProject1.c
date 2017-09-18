@@ -25,8 +25,8 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 struct Program
 {
-	struct D3D11Device *device;
-	struct Allocator *allocator;
+	D3D11Device *device;
+	Allocator *allocator;
 };
 
 int not_quit = 1;
@@ -76,7 +76,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	vertex_buffer[7] = 0.5f;
 	vertex_buffer[8] = 0.0f;
 
-	Resource_t vb_resource = create_vertex_buffer(program.device, vertex_buffer, n_vertices, stride);
+	Resource vb_resource = create_vertex_buffer(program.device, vertex_buffer, n_vertices, stride);
+
+	VertexElement_t elements[2] = {
+		{.semantic = VS_POSITION,.type = VT_FLOAT3},
+		{.semantic = VS_COLOR,.type = VT_FLOAT4},
+	};
+
+	Resource vd_resource = create_vertex_declaration(program.device, elements, 2);
 
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
@@ -86,6 +93,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		d3d11_device_update(program.device);
 	}
 
+	destroy_vertex_declaration(program.device, vd_resource);
 	destroy_vertex_buffer(program.device, vb_resource);
 
 	shutdown_d3d11_device(program.allocator, program.device);
