@@ -18,7 +18,7 @@ struct D3D11Device
 
 int initialize_d3d11_device(struct Allocator *allocator, HWND window, struct D3D11Device **d3d11_device)
 {
-	struct D3D11Device *device = *d3d11_device = allocator_allocate(allocator, sizeof(struct D3D11Device), 16);
+	struct D3D11Device *device = *d3d11_device = allocator_realloc(allocator, NULL, sizeof(struct D3D11Device), 16);
 	HRESULT hr = CreateDXGIFactory1(&IID_IDXGIFactory1, &device->dxgi_factory);
 	if (FAILED(hr))
 		return -1;
@@ -86,7 +86,7 @@ void shutdown_d3d11_device(struct Allocator *allocator, struct D3D11Device *d3d1
 	ID3D11Resource_Release(texture);
 	ID3D11RenderTargetView_Release(rt_view);
 
-	allocator_free(allocator, d3d11_device);
+	allocator_realloc(allocator, d3d11_device, 0, 0);
 }
 
 int d3d11_device_update(struct D3D11Device *device)
