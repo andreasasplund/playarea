@@ -2,9 +2,13 @@
 //
 
 #include <windows.h>
+#include <stdio.h>
+#include <assert.h>
+
 #include "WindowsProject1.h"
 #include "d3d11_device.h"
 #include "allocator.h"
+#include "stretchy_buffer.h"
 
 #define MAX_LOADSTRING 100
 
@@ -33,8 +37,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ int       nCmdShow)
 {
 	struct Program program = { .device = 0, .allocator = 0};
-	char buffer[256U];
-	program.allocator = create_allocator(buffer, sizeof(buffer));
+	char initial_allocator_buffer[256U];
+	program.allocator = create_allocator(initial_allocator_buffer, sizeof(initial_allocator_buffer));
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
@@ -55,6 +59,25 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
+	const unsigned stride = 3 * sizeof(float);
+	const unsigned n_vertices = 3;
+	float vertex_buffer[9];
+	assert(sizeof(vertex_buffer) == stride * n_vertices);
+
+	vertex_buffer[0] = -0.5f;
+	vertex_buffer[1] = -0.5f;
+	vertex_buffer[2] = 0.0f;
+
+	vertex_buffer[3] = -0.5f;
+	vertex_buffer[4] = 0.5f;
+	vertex_buffer[5] = 0.0f;
+
+	vertex_buffer[6] = 0.5f;
+	vertex_buffer[7] = 0.5f;
+	vertex_buffer[8] = 0.0f;
+
+	Resource_t vb_resource = create_vertex_buffer(program.device, vertex_buffer, n_vertices, stride);
+
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
@@ -62,6 +85,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		d3d11_device_update(program.device);
 	}
+
+	destroy_vertex_buffer(program.device, vb_resource);
 
 	shutdown_d3d11_device(program.allocator, program.device);
 	destroy_allocator(program.allocator);

@@ -6,7 +6,7 @@
 #define sb_free(a)			((a) ? (a) = allocator_realloc(sb_allocator(a), __sbraw(a), 0, 0) : 0)
 
 #define sb_push(a,v)		(__sbmaybegrow(a,1), (a)[__sbn(a)++] = (v))
-#define sb_count(a)			((a) ? __sbn(a) : 0)
+#define sb_count(a)			((a) ? (unsigned)__sbn(a) : 0)
 #define sb_add(a,n)			(__sbmaybegrow(a,n), __sbn(a)+=(n), &(a)[__sbn(a)-(n)])
 #define sb_last(a)			((a)[__sbn(a)-1])
 #define sb_pop(a)			( (__sbn(a)) ? __sbn(a)-- : 0)
