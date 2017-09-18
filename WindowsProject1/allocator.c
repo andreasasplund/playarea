@@ -21,14 +21,13 @@ void destroy_allocator(struct Allocator *allocator)
 	assert(allocator->allocation_count == 0);
 }
 
-void *allocator_allocate(struct Allocator *allocator, unsigned size, unsigned alignment)
+void *allocator_realloc(struct Allocator *allocator, void *p, unsigned size, unsigned alignment)
 {
-	++allocator->allocation_count;
-	return _aligned_malloc(size, alignment);
-}
-
-void allocator_free(struct Allocator *allocator, void *buffer)
-{
-	--allocator->allocation_count;
-	_aligned_free(buffer);
+	if (p && !size) { // Free
+		--allocator->allocation_count;
+	} else if (!p && size) { // Allocate
+		++allocator->allocation_count;
+	}
+	
+	return _aligned_realloc(p, size, alignment);
 }
