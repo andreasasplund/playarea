@@ -26,6 +26,13 @@ typedef struct Resources
 	unsigned *free_vertex_declarations;
 } Resources_t;
 
+typedef struct RenderPackage
+{
+	Allocator *allocator;
+	Resource *resources;
+	unsigned n_resources;
+} RenderPackage;
+
 struct D3D11Device
 {
 	IDXGIFactory1 *dxgi_factory;
@@ -128,7 +135,7 @@ void shutdown_d3d11_device(struct Allocator *allocator, struct D3D11Device *d3d1
 	allocator_realloc(allocator, d3d11_device, 0, 0);
 }
 
-int d3d11_device_update(struct D3D11Device *device)
+int d3d11_device_present(struct D3D11Device *device)
 {
 	if (texture == 0) {
 		HRESULT hr = IDXGISwapChain_GetBuffer(device->swap_chain, 0, &IID_ID3D11Resource, &texture);
@@ -302,4 +309,41 @@ void destroy_vertex_declaration(struct D3D11Device *device, Resource resource)
 	sb_free(vd->elements);
 
 	release_vertex_declaration_handle(device, resource);
+}
+
+RenderPackage *create_render_package(Allocator *allocator, const Resource *resources, unsigned n_resources)
+{
+	RenderPackage *package = (RenderPackage*)allocator_realloc(allocator, NULL, sizeof(RenderPackage) + sizeof(Resource) * n_resources, 16);
+	package->allocator = allocator;
+	package->n_resources = n_resources;
+	package->resources = (Resource*)((uintptr_t)package + sizeof(RenderPackage));
+	memcpy(package->resources, resources, sizeof(Resource) * n_resources);
+
+	return package;
+}
+
+void destroy_render_package(RenderPackage *render_package)
+{
+	allocator_realloc(render_package->allocator, render_package, 0, 0);
+}
+
+void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
+{
+	VertexBuffer *vb = NULL;
+	VertexDeclaration *vd = NULL;
+	const unsigned n_resources = render_package->n_resources;
+	for (unsigned i = 0; i < n_resources; ++i) {
+		Resource resource = render_package->resources[i];
+		const unsigned type = resource_type(resource);
+		switch (type) {
+		case RESOURCE_VERTEX_BUFFER:
+			vb = vertex_buffer(device, resource);
+			break;
+		case RESOURCE_VERTEX_DECLARATION:
+			vd = vertex_declaration(device, resource);
+			break;
+		}
+	}
+
+	ID3D11DeviceContext_IASetVertexBuffers(device->immediate_context, 0, 1, &vb->buffer, 0, 0);
 }

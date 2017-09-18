@@ -83,16 +83,27 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		{.semantic = VS_COLOR,.type = VT_FLOAT4},
 	};
 
-	Resource vd_resource = create_vertex_declaration(program.device, elements, 2);
+	Resource vd_resource = create_vertex_declaration(program.device, elements, 1);
+
+	Resource *resources;
+	sb_create(program.allocator, resources, 2);
+	sb_push(resources, vb_resource);
+	sb_push(resources, vd_resource);
+
+	RenderPackage *render_package = create_render_package(program.allocator, resources, sb_count(resources));
+	sb_free(resources);
 
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		d3d11_device_update(program.device);
+
+		d3d11_device_render(program.device, render_package);
+		d3d11_device_present(program.device);
 	}
 
+	destroy_render_package(render_package);
 	destroy_vertex_declaration(program.device, vd_resource);
 	destroy_vertex_buffer(program.device, vb_resource);
 

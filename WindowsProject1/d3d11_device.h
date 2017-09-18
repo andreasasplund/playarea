@@ -6,12 +6,15 @@
 
 typedef struct D3D11Device D3D11Device;
 typedef struct Allocator Allocator;
+typedef struct RenderPackage RenderPackage;
 
 int initialize_d3d11_device(Allocator *allocator, HWND window, D3D11Device **d3d11_device);
 
 void shutdown_d3d11_device(Allocator *allocator, D3D11Device *d3d11_device);
 
-int d3d11_device_update(D3D11Device *device);
+void d3d11_device_render(D3D11Device *device, RenderPackage *render_package);
+
+int d3d11_device_present(D3D11Device *device);
 
 typedef struct Resource
 {
@@ -54,3 +57,6 @@ enum VertexSemantic { VS_POSITION, VS_COLOR };
 enum VertexType { VT_FLOAT3, VT_FLOAT4 };
 Resource create_vertex_declaration(struct D3D11Device *device, VertexElement_t *vertex_elements, unsigned n_vertex_elements);
 void destroy_vertex_declaration(struct D3D11Device *device, Resource resource);
+
+RenderPackage *create_render_package(Allocator *allocator, const Resource *resources, unsigned n_resources);
+void destroy_render_package(RenderPackage *render_package);
