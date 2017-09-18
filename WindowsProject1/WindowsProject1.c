@@ -93,6 +93,43 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	RenderPackage *render_package = create_render_package(program.allocator, resources, sb_count(resources));
 	sb_free(resources);
 
+	const char vertex_shader_program[] =
+		" \
+		struct VS_INPUT \
+		{ \
+			float4 position : POSITION;\
+		};\
+		\
+		struct VS_OUTPUT \
+		{ \
+			float4 position : SV_POSITION;\
+		};\
+		\
+		VS_OUTPUT vs_main(VS_INPUT input) \
+		{ \
+			VS_OUTPUT output; \
+			output.position = input.position; \
+			return output; \
+		}; \
+		";
+	Resource vs_resource = create_shader_program(program.device, SPT_VERTEX, vertex_shader_program, sizeof(vertex_shader_program));
+
+	const char pixel_shader_program[] =
+		" \
+		struct PS_OUTPUT \
+		{ \
+			float4 color : SV_TARGET0;\
+		};\
+		\
+		PS_OUTPUT ps_main() \
+		{ \
+			PS_OUTPUT output; \
+			output.color = float4(1.0f, 0.0f, 0.0f, 1.0f); \
+			return output; \
+		}; \
+		";
+	Resource ps_resource = create_shader_program(program.device, SPT_PIXEL, pixel_shader_program, sizeof(pixel_shader_program));
+
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
@@ -103,6 +140,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		d3d11_device_present(program.device);
 	}
 
+	destroy_shader_program(program.device, vs_resource);
+	destroy_shader_program(program.device, ps_resource);
 	destroy_render_package(render_package);
 	destroy_vertex_declaration(program.device, vd_resource);
 	destroy_vertex_buffer(program.device, vb_resource);
