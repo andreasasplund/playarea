@@ -150,6 +150,7 @@
     <ClInclude Include="allocator.h" />
     <ClInclude Include="d3d11_device.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="resources.h" />
     <ClInclude Include="stretchy_buffer.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WindowsProject1.h" />
@@ -157,6 +158,7 @@
   <ItemGroup>
     <ClCompile Include="allocator.c" />
     <ClCompile Include="d3d11_device.c" />
+    <ClCompile Include="resources.c" />
     <ClCompile Include="WindowsProject1.c" />
   </ItemGroup>
   <ItemGroup>

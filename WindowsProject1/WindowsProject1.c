@@ -9,6 +9,7 @@
 #include "d3d11_device.h"
 #include "allocator.h"
 #include "stretchy_buffer.h"
+#include "resources.h"
 
 #define MAX_LOADSTRING 100
 
@@ -68,7 +69,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	};
 	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
-	Resource vb_resource = create_vertex_buffer(program.device, vertex_buffer, n_vertices, stride);
+	Resources *resources = d3d11_resources(program.device);
+	Resource vb_resource = create_vertex_buffer(resources, vertex_buffer, n_vertices, stride);
 
 	UINT16 index_buffer[] = {
 		0, 1, 2,
@@ -76,14 +78,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	};
 	const unsigned n_indices = sizeof(index_buffer) / sizeof(index_buffer[0]);
 	const unsigned index_stride = 16;
-	Resource ib_resource = create_index_buffer(program.device, index_buffer, n_indices, index_stride);
+	Resource ib_resource = create_index_buffer(resources, index_buffer, n_indices, index_stride);
 
-	VertexElement_t elements[2] = {
+	VertexElement elements[2] = {
 		{.semantic = VS_POSITION,.type = VT_FLOAT3},
 		{.semantic = VS_TEXCOORD,.type = VT_FLOAT3},
 	};
 
-	Resource vd_resource = create_vertex_declaration(program.device, elements, 2);
+	Resource vd_resource = create_vertex_declaration(resources, elements, 2);
 
 	const char vertex_shader_program[] =
 		" \
@@ -120,19 +122,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			return output; \
 		}; \
 		";
-	Resource vs_resource = create_shader_program(program.device, SPT_VERTEX, vertex_shader_program, sizeof(vertex_shader_program));
-	Resource ps_resource = create_shader_program(program.device, SPT_PIXEL, vertex_shader_program, sizeof(vertex_shader_program));
+	Resource vs_resource = create_shader_program(resources, SPT_VERTEX, vertex_shader_program, sizeof(vertex_shader_program));
+	Resource ps_resource = create_shader_program(resources, SPT_PIXEL, vertex_shader_program, sizeof(vertex_shader_program));
 
-	Resource resources[] = {
+	Resource render_resources[] = {
 		vb_resource,
 		ib_resource,
 		vd_resource,
 		vs_resource,
 		ps_resource,
 	};
-	const unsigned n_resources = sizeof(resources) / sizeof(resources[0]);
+	const unsigned n_resources = sizeof(render_resources) / sizeof(render_resources[0]);
 
-	RenderPackage *render_package = create_render_package(program.allocator, resources, n_resources, n_vertices, n_indices);
+	RenderPackage *render_package = create_render_package(program.allocator, render_resources, n_resources, n_vertices, n_indices);
 
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
@@ -144,12 +146,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		d3d11_device_present(program.device);
 	}
 
-	destroy_shader_program(program.device, vs_resource);
-	destroy_shader_program(program.device, ps_resource);
+	destroy_shader_program(resources, vs_resource);
+	destroy_shader_program(resources, ps_resource);
 	destroy_render_package(render_package);
-	destroy_vertex_declaration(program.device, vd_resource);
-	destroy_index_buffer(program.device, ib_resource);
-	destroy_vertex_buffer(program.device, vb_resource);
+	destroy_vertex_declaration(resources, vd_resource);
+	destroy_index_buffer(resources, ib_resource);
+	destroy_vertex_buffer(resources, vb_resource);
 
 	shutdown_d3d11_device(program.allocator, program.device);
 	destroy_allocator(program.allocator);

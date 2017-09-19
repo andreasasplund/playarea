@@ -1,5 +1,7 @@
 #pragma once
 
+#include "allocator.h"
+
 // Heavily inspired by https://github.com/nothings/stb/blob/master/stretchy_buffer.h
 
 #define sb_create(alloc, a, n)	( (a) = __sbcreatef(alloc, n, sizeof(*(a))))

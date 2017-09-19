@@ -33,6 +33,9 @@
     <ClInclude Include="stretchy_buffer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="resources.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WindowsProject1.c">
@@ -42,6 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="allocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="resources.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
