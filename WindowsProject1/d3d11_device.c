@@ -145,7 +145,7 @@ int d3d11_device_present(D3D11Device *device)
 	return 0;
 }
 
-void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
+void d3d11_device_clear(D3D11Device *device)
 {
 	static unsigned color_index = 0;
 	color_index = color_index++ % 3;
@@ -158,8 +158,11 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 		{ 0.0, 0.0, 1.0, 1.0 },
 		{ 0.0, 0.0, 0.0, 1.0 }
 	};
-	ID3D11DeviceContext_ClearRenderTargetView(device->immediate_context, device->swap_chain_rtv, colors[3].rgba);
+	ID3D11DeviceContext_ClearRenderTargetView(device->immediate_context, device->swap_chain_rtv, colors[0].rgba);
+}
 
+void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
+{
 	Resource vs_res, vd_res;
 	Buffer *vb = NULL;
 	Buffer *ib = NULL;
