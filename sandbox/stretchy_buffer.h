@@ -16,7 +16,7 @@
 #define sb_allocator(a)		( __sba(a) )
 
 #define __sbraw(a) ((unsigned __int64 *) (a) - 3)
-#define __sba(a)   (struct Allocator *)__sbraw(a)[0]
+#define __sba(a)   (Allocator *)__sbraw(a)[0]
 #define __sbm(a)   __sbraw(a)[1]
 #define __sbn(a)   __sbraw(a)[2]
 
@@ -26,7 +26,7 @@
 
 #include <stdlib.h>
 
-static void *__sbcreatef(struct Allocator *allocator, unsigned initial_capacity, int item_size)
+static void *__sbcreatef(Allocator *allocator, unsigned initial_capacity, int item_size)
 {
 	unsigned __int64 *p = (unsigned __int64*)allocator_realloc(allocator, NULL, item_size * initial_capacity + sizeof(unsigned __int64*) * 3, 16);
 
@@ -42,7 +42,7 @@ static void *__sbgrowf(void *arr, int increment, int item_size)
 	int dbl_cur = 2 * (int)__sbm(arr);
 	int min_needed = (int)sb_count(arr) + increment;
 	int m = dbl_cur > min_needed ? dbl_cur : min_needed;
-	struct Allocator *alloc = sb_allocator(arr);
+	Allocator *alloc = sb_allocator(arr);
 	unsigned __int64 *p = (unsigned __int64 *)allocator_realloc(alloc, __sbraw(arr), item_size * m + sizeof(unsigned __int64*) * 3, 16);
 	if (p) {
 		p[1] = m;

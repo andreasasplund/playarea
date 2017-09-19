@@ -30,7 +30,7 @@ inline unsigned resource_handle(Resource resource)
 
 inline Resource resource_encode_handle_type(unsigned handle, unsigned type)
 {
-	struct Resource resource = { .handle = (handle & 0x00FFFFFFU) | ((type & 0xFFU) << 24U) };
+	Resource resource = { .handle = (handle & 0x00FFFFFFU) | ((type & 0xFFU) << 24U) };
 	return resource;
 }
 

@@ -3,15 +3,15 @@
 #include <stdlib.h>
 #include <assert.h>
 
-typedef struct Allocator
+struct Allocator
 {
 	unsigned allocation_count;
-} Allocator;
+};
 
 Allocator *create_allocator(void *buffer, unsigned buffer_size)
 {
-	assert(buffer_size >= sizeof(struct Allocator));
-	struct Allocator *allocator = (struct Allocator*)buffer;
+	assert(buffer_size >= sizeof(Allocator));
+	Allocator *allocator = buffer;
 	allocator->allocation_count = 0;
 	return allocator;
 }

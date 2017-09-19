@@ -5,7 +5,7 @@
 #include <d3dcompiler.h>
 #include "stretchy_buffer.h"
 
-typedef struct Resources
+struct Resources
 {
 	Allocator *allocator;
 	ID3D11Device *d3d_device;
@@ -27,7 +27,7 @@ typedef struct Resources
 
 	InputLayout *input_layouts;
 	UINT64 *input_layout_hashes;
-} Resources;
+};
 
 Resource allocate_vertex_buffer_handle(Resources *resources)
 {
