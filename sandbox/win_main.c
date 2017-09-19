@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "WindowsProject1.h"
+#include "window_resources.h"
 #include "d3d11_device.h"
 #include "allocator.h"
 #include "stretchy_buffer.h"
@@ -15,8 +15,8 @@
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+WCHAR szTitle[] = L"Sandbox";                  // The title bar text
+WCHAR szWindowClass[] = L"SandboxClass";            // the main window class name
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -46,8 +46,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// TODO: Place code here.
 
 	// Initialize global strings
-	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-	LoadStringW(hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
+	//LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	//LoadStringW(hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
 	// Perform application initialization:
