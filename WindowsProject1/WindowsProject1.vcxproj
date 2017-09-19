@@ -24,6 +24,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>WindowsProject1</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <ProjectName>sandbox</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -159,7 +160,7 @@
     <ClCompile Include="allocator.c" />
     <ClCompile Include="d3d11_device.c" />
     <ClCompile Include="resources.c" />
-    <ClCompile Include="WindowsProject1.c" />
+    <ClCompile Include="win_main.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WindowsProject1.rc" />

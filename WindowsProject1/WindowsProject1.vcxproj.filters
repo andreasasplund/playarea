@@ -38,9 +38,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="WindowsProject1.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="d3d11_device.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,6 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="resources.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="win_main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
