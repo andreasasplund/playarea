@@ -61,6 +61,11 @@ struct D3D11Device
 
 	struct Allocator *allocator;
 	Resources_t resources;
+
+	// Default states
+	ID3D11BlendState *blend_state;
+	ID3D11DepthStencilState *depth_stencil_state;
+	ID3D11RasterizerState *rasterizer_state;
 };
 
 Resource allocate_vertex_buffer_handle(D3D11Device *device)
@@ -225,6 +230,14 @@ int initialize_d3d11_device(struct Allocator *allocator, HWND window, struct D3D
 		(void)first_ps;
 	}
 
+	D3D11_BLEND_DESC blend_state_desc = { .AlphaToCoverageEnable = FALSE,.IndependentBlendEnable = FALSE, };
+	D3D11_DEPTH_STENCIL_DESC depth_stencil_desc = { .DepthEnable = FALSE };
+	D3D11_RASTERIZER_DESC rasterizer_desc = { .FillMode = D3D11_FILL_SOLID,.CullMode = D3D11_CULL_NONE };
+
+	ID3D11Device_CreateBlendState(device->device, &blend_state_desc, &device->blend_state);
+	ID3D11Device_CreateDepthStencilState(device->device, &depth_stencil_desc, &device->depth_stencil_state);
+	ID3D11Device_CreateRasterizerState(device->device, &rasterizer_desc, &device->rasterizer_state);
+
 	return 0;
 }
 
@@ -237,6 +250,10 @@ void shutdown_d3d11_device(struct Allocator *allocator, struct D3D11Device *d3d1
 	release_vertex_declaration_handle(d3d11_device, resource_encode_handle_type(0, RESOURCE_VERTEX_DECLARATION));
 	release_vertex_shader_handle(d3d11_device, resource_encode_handle_type(0, RESOURCE_VERTEX_SHADER));
 	release_pixel_shader_handle(d3d11_device, resource_encode_handle_type(0, RESOURCE_PIXEL_SHADER));
+
+	ID3D11BlendState_Release(d3d11_device->blend_state);
+	ID3D11DepthStencilState_Release(d3d11_device->depth_stencil_state);
+	ID3D11RasterizerState_Release(d3d11_device->rasterizer_state);
 
 	IDXGISwapChain_Release(d3d11_device->swap_chain);
 	ID3D11Debug_Release(d3d11_device->debug_layer);
@@ -502,4 +519,8 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	UINT stride = 0;
 	UINT offset = 0;
 	ID3D11DeviceContext_IASetVertexBuffers(device->immediate_context, 0, 1, &vb->buffer, &stride, &offset);
+
+	ID3D11DeviceContext_OMSetDepthStencilState(device->immediate_context, device->depth_stencil_state, 0);
+	ID3D11DeviceContext_OMSetBlendState(device->immediate_context, device->blend_state, 0, 0xFFFFFFFFU);
+	ID3D11DeviceContext_RSSetState(device->immediate_context, device->rasterizer_state);
 }
