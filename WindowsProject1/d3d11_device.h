@@ -53,7 +53,7 @@ typedef struct VertexElement
 	unsigned type;
 } VertexElement_t;
 
-enum VertexSemantic { VS_POSITION, VS_COLOR };
+enum VertexSemantic { VS_POSITION, VS_COLOR, VS_TEXCOORD };
 enum VertexType { VT_FLOAT3, VT_FLOAT4 };
 Resource create_vertex_declaration(D3D11Device *device, VertexElement_t *vertex_elements, unsigned n_vertex_elements);
 void destroy_vertex_declaration(D3D11Device *device, Resource resource);

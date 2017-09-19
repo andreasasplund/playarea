@@ -59,71 +59,62 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
-	const unsigned stride = 4 * sizeof(float);
+	const unsigned stride = 6 * sizeof(float);
 	const unsigned n_vertices = 3;
-	float vertex_buffer[12];
+	float vertex_buffer[18] = {
+		-0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
+	};
 	assert(sizeof(vertex_buffer) == stride * n_vertices);
 
-	vertex_buffer[0] = -0.5f;
-	vertex_buffer[1] = 0.5f;
-	vertex_buffer[2] = 0.0f;
-	vertex_buffer[3] = 1.0f;
-
-	vertex_buffer[4] = -0.5f;
-	vertex_buffer[5] = -0.5f;
-	vertex_buffer[6] = 0.0f;
-	vertex_buffer[7] = 1.0f;
-
-	vertex_buffer[8] = 0.5f;
-	vertex_buffer[9] = 0.5f;
-	vertex_buffer[10] = 0.0f;
-	vertex_buffer[11] = 1.0f;
 
 	Resource vb_resource = create_vertex_buffer(program.device, vertex_buffer, n_vertices, stride);
 
 	VertexElement_t elements[2] = {
-		{.semantic = VS_POSITION,.type = VT_FLOAT4},
-		{.semantic = VS_COLOR,.type = VT_FLOAT4},
+		{.semantic = VS_POSITION,.type = VT_FLOAT3},
+		{.semantic = VS_TEXCOORD,.type = VT_FLOAT3},
 	};
 
-	Resource vd_resource = create_vertex_declaration(program.device, elements, 1);
+	Resource vd_resource = create_vertex_declaration(program.device, elements, 2);
 
 	const char vertex_shader_program[] =
 		" \
 		struct VS_INPUT \
 		{ \
 			float4 position : POSITION;\
+			float3 color : TEXCOORD0;\
 		};\
 		\
 		struct VS_OUTPUT \
 		{ \
 			float4 position : SV_POSITION;\
+			float3 color : TEXCOORD0;\
 		};\
 		\
 		VS_OUTPUT vs_main(VS_INPUT input) \
 		{ \
 			VS_OUTPUT output; \
 			output.position = input.position; \
+			output.color = input.color; \
+			return output; \
+		}; \
+		\
+		struct PS_OUTPUT \
+		{ \
+			float4 color : SV_TARGET0; \
+		}; \
+		\
+		PS_OUTPUT ps_main(VS_OUTPUT input) \
+		{ \
+			PS_OUTPUT output; \
+			output.color.rgb = input.color; \
+			output.color.a = 1.0f; \
 			return output; \
 		}; \
 		";
 	Resource vs_resource = create_shader_program(program.device, SPT_VERTEX, vertex_shader_program, sizeof(vertex_shader_program));
-
-	const char pixel_shader_program[] =
-		" \
-		struct PS_OUTPUT \
-		{ \
-			float4 color : SV_TARGET0;\
-		};\
-		\
-		PS_OUTPUT ps_main() \
-		{ \
-			PS_OUTPUT output; \
-			output.color = float4(1.0f, 0.0f, 0.0f, 1.0f); \
-			return output; \
-		}; \
-		";
-	Resource ps_resource = create_shader_program(program.device, SPT_PIXEL, pixel_shader_program, sizeof(pixel_shader_program));
+	Resource ps_resource = create_shader_program(program.device, SPT_PIXEL, vertex_shader_program, sizeof(vertex_shader_program));
 
 	Resource resources[] = {
 		vb_resource,

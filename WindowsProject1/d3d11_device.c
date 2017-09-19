@@ -11,6 +11,7 @@
 typedef struct VertexBuffer
 {
 	ID3D11Buffer *buffer;
+	unsigned stride;
 } VertexBuffer;
 
 typedef struct VertexDeclaration
@@ -354,6 +355,7 @@ Resource create_vertex_buffer(D3D11Device *device, void *buffer, unsigned vertic
 	Resource vb_res = allocate_vertex_buffer_handle(device);
 
 	VertexBuffer *vb = vertex_buffer(device, vb_res);
+	vb->stride = stride;
 
 	HRESULT hr = ID3D11Device_CreateBuffer(device->device, &desc, buffer ? &sub_desc : 0, &vb->buffer);
 	assert(SUCCEEDED(hr));
@@ -385,7 +387,7 @@ Resource create_vertex_declaration(D3D11Device *device, VertexElement_t *vertex_
 
 	sb_create(device->allocator, vd->elements, n_vertex_elements);
 
-	static const char* semantics[] = { "POSITION", "COLOR" };
+	static const char* semantics[] = { "POSITION", "COLOR", "TEXCOORD" };
 	static const DXGI_FORMAT formats[] = { DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT };
 	static unsigned type_size[] = {
 		3 * sizeof(float),
@@ -515,8 +517,8 @@ InputLayout *input_layout(D3D11Device *device, Resource vs_res, Resource vd_res)
 
 	VertexShader *vs = vertex_shader(device, vs_res);
 	VertexDeclaration *vd = vertex_declaration(device, vd_res);
-
-	ID3D11Device_CreateInputLayout(device->device, vd->elements, sb_count(vd->elements), ID3D10Blob_GetBufferPointer(vs->bytecode), ID3D10Blob_GetBufferSize(vs->bytecode), &in_layout.input_layout);
+	const unsigned n_elements = sb_count(vd->elements);
+	ID3D11Device_CreateInputLayout(device->device, vd->elements, n_elements, ID3D10Blob_GetBufferPointer(vs->bytecode), ID3D10Blob_GetBufferSize(vs->bytecode), &in_layout.input_layout);
 
 	sb_push(device->resources.input_layouts, in_layout);
 
@@ -601,7 +603,7 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	ID3D11DeviceContext_VSSetShader(device->immediate_context, vs->shader, NULL, 0);
 	ID3D11DeviceContext_PSSetShader(device->immediate_context, ps->shader, NULL, 0);
 
-	UINT stride = 16;
+	UINT stride = vb->stride;
 	UINT offset = 0;
 	ID3D11DeviceContext_IASetVertexBuffers(device->immediate_context, 0, 1, &vb->buffer, &stride, &offset);
 
