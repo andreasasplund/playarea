@@ -65,12 +65,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	assert(sizeof(vertex_buffer) == stride * n_vertices);
 
 	vertex_buffer[0] = -0.5f;
-	vertex_buffer[1] = -0.5f;
+	vertex_buffer[1] = 0.5f;
 	vertex_buffer[2] = 0.0f;
 	vertex_buffer[3] = 1.0f;
 
 	vertex_buffer[4] = -0.5f;
-	vertex_buffer[5] = 0.5f;
+	vertex_buffer[5] = -0.5f;
 	vertex_buffer[6] = 0.0f;
 	vertex_buffer[7] = 1.0f;
 

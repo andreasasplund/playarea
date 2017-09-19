@@ -256,7 +256,7 @@ int initialize_d3d11_device(struct Allocator *allocator, HWND window, D3D11Devic
 		 0, 0, 0, 0, 0, 0, 0, 0xFU ,
 		 0, 0, 0, 0, 0, 0, 0, 0xFU },
 	};
-	D3D11_DEPTH_STENCIL_DESC depth_stencil_desc = { .DepthEnable = FALSE };
+	D3D11_DEPTH_STENCIL_DESC depth_stencil_desc = { .DepthEnable = FALSE, .DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D11_COMPARISON_ALWAYS };
 	D3D11_RASTERIZER_DESC rasterizer_desc = { .FillMode = D3D11_FILL_SOLID,.CullMode = D3D11_CULL_NONE };
 
 	ID3D11Device_CreateBlendState(device->device, &blend_state_desc, &device->resources.blend_state);
@@ -601,7 +601,7 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	ID3D11DeviceContext_VSSetShader(device->immediate_context, vs->shader, NULL, 0);
 	ID3D11DeviceContext_PSSetShader(device->immediate_context, ps->shader, NULL, 0);
 
-	UINT stride = 0;
+	UINT stride = 16;
 	UINT offset = 0;
 	ID3D11DeviceContext_IASetVertexBuffers(device->immediate_context, 0, 1, &vb->buffer, &stride, &offset);
 
