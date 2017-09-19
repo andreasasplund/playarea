@@ -59,39 +59,34 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
-	const unsigned stride = 3 * sizeof(float);
+	const unsigned stride = 4 * sizeof(float);
 	const unsigned n_vertices = 3;
-	float vertex_buffer[9];
+	float vertex_buffer[12];
 	assert(sizeof(vertex_buffer) == stride * n_vertices);
 
 	vertex_buffer[0] = -0.5f;
 	vertex_buffer[1] = -0.5f;
 	vertex_buffer[2] = 0.0f;
+	vertex_buffer[3] = 1.0f;
 
-	vertex_buffer[3] = -0.5f;
-	vertex_buffer[4] = 0.5f;
-	vertex_buffer[5] = 0.0f;
+	vertex_buffer[4] = -0.5f;
+	vertex_buffer[5] = 0.5f;
+	vertex_buffer[6] = 0.0f;
+	vertex_buffer[7] = 1.0f;
 
-	vertex_buffer[6] = 0.5f;
-	vertex_buffer[7] = 0.5f;
-	vertex_buffer[8] = 0.0f;
+	vertex_buffer[8] = 0.5f;
+	vertex_buffer[9] = 0.5f;
+	vertex_buffer[10] = 0.0f;
+	vertex_buffer[11] = 1.0f;
 
 	Resource vb_resource = create_vertex_buffer(program.device, vertex_buffer, n_vertices, stride);
 
 	VertexElement_t elements[2] = {
-		{.semantic = VS_POSITION,.type = VT_FLOAT3},
+		{.semantic = VS_POSITION,.type = VT_FLOAT4},
 		{.semantic = VS_COLOR,.type = VT_FLOAT4},
 	};
 
 	Resource vd_resource = create_vertex_declaration(program.device, elements, 1);
-
-	Resource *resources;
-	sb_create(program.allocator, resources, 2);
-	sb_push(resources, vb_resource);
-	sb_push(resources, vd_resource);
-
-	RenderPackage *render_package = create_render_package(program.allocator, resources, sb_count(resources));
-	sb_free(resources);
 
 	const char vertex_shader_program[] =
 		" \
@@ -129,6 +124,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}; \
 		";
 	Resource ps_resource = create_shader_program(program.device, SPT_PIXEL, pixel_shader_program, sizeof(pixel_shader_program));
+
+	Resource resources[] = {
+		vb_resource,
+		vd_resource,
+		vs_resource,
+		ps_resource,
+	};
+	const unsigned n_resources = sizeof(resources) / sizeof(resources[0]);
+
+	RenderPackage *render_package = create_render_package(program.allocator, resources, n_resources);
 
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
