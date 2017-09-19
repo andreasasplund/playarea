@@ -1,0 +1,8 @@
+Debug/
+Release/
+x64/
+WindowsProject1/x64
+.vs/
+*.vcproj
+*.vcxproj
+*.user
