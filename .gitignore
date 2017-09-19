@@ -6,3 +6,5 @@ WindowsProject1/x64
 *.vcproj
 *.vcxproj
 *.user
+*.opendb
+*.db
