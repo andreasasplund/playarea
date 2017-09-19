@@ -40,6 +40,9 @@ typedef struct Resources
 	VertexBuffer *vertex_buffers;
 	unsigned *free_vertex_buffers;
 
+	VertexBuffer *index_buffers;
+	unsigned *free_index_buffers;
+
 	VertexDeclaration *vertex_declarations;
 	unsigned *free_vertex_declarations;
 
@@ -79,6 +82,8 @@ typedef struct RenderPackage
 	Allocator *allocator;
 	Resource *resources;
 	unsigned n_resources;
+	unsigned n_vertices;
+	unsigned n_indices;
 } RenderPackage;
 
 Resource allocate_vertex_buffer_handle(D3D11Device *device)
@@ -101,6 +106,28 @@ void release_vertex_buffer_handle(D3D11Device *device, Resource resource)
 	assert(resource_type(resource) == RESOURCE_VERTEX_BUFFER);
 	unsigned h = resource_handle(resource);
 	sb_push(device->resources.free_vertex_buffers, h);
+}
+
+Resource allocate_index_buffer_handle(D3D11Device *device)
+{
+	if (sb_count(device->resources.free_index_buffers)) {
+		unsigned h = sb_last(device->resources.free_index_buffers);
+		sb_pop(device->resources.free_index_buffers);
+		return resource_encode_handle_type(h, RESOURCE_INDEX_BUFFER);
+	}
+
+	unsigned h = sb_count(device->resources.index_buffers);
+	VertexBuffer index_buffer = { .buffer = NULL };
+	sb_push(device->resources.index_buffers, index_buffer);
+
+	return resource_encode_handle_type(h, RESOURCE_INDEX_BUFFER);
+}
+
+void release_index_buffer_handle(D3D11Device *device, Resource resource)
+{
+	assert(resource_type(resource) == RESOURCE_INDEX_BUFFER);
+	unsigned h = resource_handle(resource);
+	sb_push(device->resources.free_index_buffers, h);
 }
 
 Resource allocate_vertex_declaration_handle(D3D11Device *device)
@@ -220,6 +247,14 @@ int initialize_d3d11_device(struct Allocator *allocator, HWND window, D3D11Devic
 	}
 
 	{
+		sb_create(allocator, device->resources.index_buffers, 10);
+		sb_create(allocator, device->resources.free_index_buffers, 10);
+		Resource first_ib = allocate_index_buffer_handle(device);
+		assert(resource_handle(first_ib) == 0);
+		(void)first_ib;
+	}
+
+	{
 		sb_create(allocator, device->resources.vertex_declarations, 10);
 		sb_create(allocator, device->resources.free_vertex_declarations, 10);
 		Resource first_vd = allocate_vertex_declaration_handle(device);
@@ -310,6 +345,8 @@ void shutdown_d3d11_device(struct Allocator *allocator, D3D11Device *device)
 
 	sb_free(device->resources.vertex_buffers);
 	sb_free(device->resources.free_vertex_buffers);
+	sb_free(device->resources.index_buffers);
+	sb_free(device->resources.free_index_buffers);
 	sb_free(device->resources.vertex_declarations);
 	sb_free(device->resources.free_vertex_declarations);
 	sb_free(device->resources.vertex_shaders);
@@ -371,6 +408,48 @@ void destroy_vertex_buffer(D3D11Device *device, Resource resource)
 	ID3D11Buffer_Release(vb->buffer);
 
 	release_vertex_buffer_handle(device, resource);
+}
+
+VertexBuffer *index_buffer(D3D11Device *device, Resource resource)
+{
+	return &device->resources.index_buffers[resource_handle(resource)];
+}
+
+Resource create_index_buffer(D3D11Device *device, void *buffer, unsigned indices, unsigned stride)
+{
+	D3D11_BUFFER_DESC desc;
+	desc.ByteWidth = indices * stride;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	desc.StructureByteStride = 0;
+
+	D3D11_SUBRESOURCE_DATA sub_desc;
+	sub_desc.SysMemPitch = 0;
+	sub_desc.SysMemSlicePitch = 0;
+	sub_desc.pSysMem = buffer;
+
+	Resources_t *resources = &device->resources;
+	Resource vb_res = allocate_index_buffer_handle(device);
+
+	VertexBuffer *vb = index_buffer(device, vb_res);
+	vb->stride = stride;
+
+	HRESULT hr = ID3D11Device_CreateBuffer(device->device, &desc, buffer ? &sub_desc : 0, &vb->buffer);
+	assert(SUCCEEDED(hr));
+
+	return vb_res;
+}
+
+void destroy_index_buffer(D3D11Device *device, Resource resource)
+{
+	assert(resource_type(resource) == RESOURCE_INDEX_BUFFER);
+
+	VertexBuffer *ib = index_buffer(device, resource);
+	ID3D11Buffer_Release(ib->buffer);
+
+	release_index_buffer_handle(device, resource);
 }
 
 VertexDeclaration *vertex_declaration(D3D11Device *device, Resource resource)
@@ -525,13 +604,15 @@ InputLayout *input_layout(D3D11Device *device, Resource vs_res, Resource vd_res)
 	return &sb_last(device->resources.input_layouts);
 }
 
-RenderPackage *create_render_package(Allocator *allocator, const Resource *resources, unsigned n_resources)
+RenderPackage *create_render_package(Allocator *allocator, const Resource *resources, unsigned n_resources, unsigned n_vertices, unsigned n_indices)
 {
 	RenderPackage *package = (RenderPackage*)allocator_realloc(allocator, NULL, sizeof(RenderPackage) + sizeof(Resource) * n_resources, 16);
 	package->allocator = allocator;
 	package->n_resources = n_resources;
 	package->resources = (Resource*)((uintptr_t)package + sizeof(RenderPackage));
 	memcpy(package->resources, resources, sizeof(Resource) * n_resources);
+	package->n_vertices = n_vertices;
+	package->n_indices = n_indices;
 
 	return package;
 }
@@ -558,6 +639,7 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 
 	Resource vs_res, vd_res;
 	VertexBuffer *vb = NULL;
+	VertexBuffer *ib = NULL;
 	VertexDeclaration *vd = NULL;
 	VertexShader *vs = NULL;
 	PixelShader *ps = NULL;
@@ -568,6 +650,9 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 		switch (type) {
 		case RESOURCE_VERTEX_BUFFER:
 			vb = vertex_buffer(device, resource);
+			break;
+		case RESOURCE_INDEX_BUFFER:
+			ib = index_buffer(device, resource);
 			break;
 		case RESOURCE_VERTEX_DECLARATION:
 			vd = vertex_declaration(device, resource);
@@ -606,10 +691,17 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	UINT stride = vb->stride;
 	UINT offset = 0;
 	ID3D11DeviceContext_IASetVertexBuffers(device->immediate_context, 0, 1, &vb->buffer, &stride, &offset);
+	DXGI_FORMAT ib_format = ib ? (ib->stride == 16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT) : DXGI_FORMAT_R16_UINT;
+	ID3D11Buffer *ib_buffer = ib ? ib->buffer : NULL;
+	ID3D11DeviceContext_IASetIndexBuffer(device->immediate_context, ib_buffer, ib_format, 0);
 
 	ID3D11DeviceContext_OMSetDepthStencilState(device->immediate_context, device->resources.depth_stencil_state, 0);
 	ID3D11DeviceContext_OMSetBlendState(device->immediate_context, device->resources.blend_state, 0, 0xFFFFFFFFU);
 	ID3D11DeviceContext_RSSetState(device->immediate_context, device->resources.rasterizer_state);
 
-	ID3D11DeviceContext_Draw(device->immediate_context, 3, 0);
+	if (ib) {
+		ID3D11DeviceContext_DrawIndexed(device->immediate_context, render_package->n_indices, 0, 0);
+	} else {
+		ID3D11DeviceContext_Draw(device->immediate_context, render_package->n_vertices, 0);
+	}
 }

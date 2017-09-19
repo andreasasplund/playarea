@@ -60,16 +60,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MSG msg;
 
 	const unsigned stride = 6 * sizeof(float);
-	const unsigned n_vertices = 3;
-	float vertex_buffer[18] = {
+	float vertex_buffer[] = {
 		-0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
 		-0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
 		0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
+		0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
 	};
-	assert(sizeof(vertex_buffer) == stride * n_vertices);
-
+	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
 	Resource vb_resource = create_vertex_buffer(program.device, vertex_buffer, n_vertices, stride);
+
+	UINT16 index_buffer[] = {
+		0, 1, 2,
+		2, 1, 3,
+	};
+	const unsigned n_indices = sizeof(index_buffer) / sizeof(index_buffer[0]);
+	const unsigned index_stride = 16;
+	Resource ib_resource = create_index_buffer(program.device, index_buffer, n_indices, index_stride);
 
 	VertexElement_t elements[2] = {
 		{.semantic = VS_POSITION,.type = VT_FLOAT3},
@@ -118,13 +125,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	Resource resources[] = {
 		vb_resource,
+		ib_resource,
 		vd_resource,
 		vs_resource,
 		ps_resource,
 	};
 	const unsigned n_resources = sizeof(resources) / sizeof(resources[0]);
 
-	RenderPackage *render_package = create_render_package(program.allocator, resources, n_resources);
+	RenderPackage *render_package = create_render_package(program.allocator, resources, n_resources, n_vertices, n_indices);
 
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
@@ -140,6 +148,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	destroy_shader_program(program.device, ps_resource);
 	destroy_render_package(render_package);
 	destroy_vertex_declaration(program.device, vd_resource);
+	destroy_index_buffer(program.device, ib_resource);
 	destroy_vertex_buffer(program.device, vb_resource);
 
 	shutdown_d3d11_device(program.allocator, program.device);
