@@ -1,5 +1,6 @@
 #include "d3d11_device.h"
 
+#define COBJMACROS
 #include <dxgi.h>
 #include <d3d11.h>
 #include <assert.h>

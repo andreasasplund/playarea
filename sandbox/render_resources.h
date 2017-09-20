@@ -1,9 +1,14 @@
 #pragma once
 
-#define CINTERFACE
-#define COBJMACROS
-
-#include <d3d11.h>
+typedef struct ID3D11Device ID3D11Device;
+typedef struct ID3D11Buffer ID3D11Buffer;
+typedef struct D3D11_INPUT_ELEMENT_DESC D3D11_INPUT_ELEMENT_DESC;
+typedef struct ID3D11ShaderResourceView ID3D11ShaderResourceView;
+typedef struct ID3D11VertexShader ID3D11VertexShader;
+typedef struct ID3D11PixelShader ID3D11PixelShader;
+typedef struct ID3D10Blob ID3D10Blob;
+typedef ID3D10Blob ID3DBlob;
+typedef struct ID3D11InputLayout ID3D11InputLayout;
 
 typedef struct RenderResources RenderResources;
 typedef struct Allocator Allocator;
