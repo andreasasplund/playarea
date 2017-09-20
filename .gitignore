@@ -2,8 +2,5 @@ Debug/
 Release/
 x64/
 .vs/
-*.vcproj
-*.vcxproj
-*.user
 *.opendb
 *.db
