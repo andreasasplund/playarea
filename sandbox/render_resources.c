@@ -366,8 +366,7 @@ Resource render_resources_create_raw_buffer(RenderResources *resources, void *bu
 	HRESULT hr = ID3D11Device_CreateBuffer(resources->d3d_device, &desc, buffer ? &sub_desc : 0, &rb->buffer);
 	assert(SUCCEEDED(hr));
 
-	ID3D11Resource *resource;
-	ID3D11Buffer_QueryInterface(rb->buffer, &IID_ID3D11Resource, &resource);
+	ID3D11Buffer_QueryInterface(rb->buffer, &IID_ID3D11Resource, &rb->resource);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
 	srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -375,9 +374,8 @@ Resource render_resources_create_raw_buffer(RenderResources *resources, void *bu
 	srv_desc.BufferEx.FirstElement = 0;
 	srv_desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
 	srv_desc.BufferEx.NumElements = size / sizeof(unsigned);
-	hr = ID3D11Device_CreateShaderResourceView(resources->d3d_device, resource, &srv_desc, &rb->srv);
+	hr = ID3D11Device_CreateShaderResourceView(resources->d3d_device, rb->resource, &srv_desc, &rb->srv);
 
-	ID3D11Resource_Release(resource);
 	return rb_res;
 }
 
@@ -386,10 +384,29 @@ void render_resources_destroy_raw_buffer(RenderResources *resources, Resource re
 	assert(resource_type(resource) == RESOURCE_RAW_BUFFER);
 
 	RawBuffer *rb = render_resources_raw_buffer(resources, resource);
+	ID3D11Resource_Release(rb->resource);
 	ID3D11Buffer_Release(rb->buffer);
 	ID3D11ShaderResourceView_Release(rb->srv);
 
 	render_resources_release_raw_buffer_handle(resources, resource);
+}
+
+void render_resource_raw_buffer_update(RenderResources *resources, Resource resource, void *buffer, unsigned size)
+{
+	assert(resource_type(resource) == RESOURCE_RAW_BUFFER);
+	RawBuffer *rb = render_resources_raw_buffer(resources, resource);
+
+	ID3D11DeviceContext *immediate_context;
+	ID3D11Device_GetImmediateContext(resources->d3d_device, &immediate_context);
+	D3D11_BOX dest_box;
+	dest_box.left = 0;
+	dest_box.right = size;
+	dest_box.top = 0;
+	dest_box.bottom = 1;
+	dest_box.front = 0;
+	dest_box.back = 1;
+	ID3D11DeviceContext_UpdateSubresource(immediate_context, rb->resource, 0, &dest_box, buffer, size, 0);
+	ID3D11DeviceContext_Release(immediate_context);
 }
 
 VertexDeclaration *render_resources_vertex_declaration(RenderResources *resources, Resource resource)

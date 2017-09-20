@@ -2,6 +2,7 @@
 
 typedef struct ID3D11Device ID3D11Device;
 typedef struct ID3D11Buffer ID3D11Buffer;
+typedef struct ID3D11Resource ID3D11Resource;
 typedef struct D3D11_INPUT_ELEMENT_DESC D3D11_INPUT_ELEMENT_DESC;
 typedef struct ID3D11ShaderResourceView ID3D11ShaderResourceView;
 typedef struct ID3D11VertexShader ID3D11VertexShader;
@@ -54,6 +55,7 @@ typedef struct RawBuffer
 {
 	ID3D11Buffer *buffer;
 	ID3D11ShaderResourceView *srv;
+	ID3D11Resource *resource;
 } RawBuffer;
 
 typedef struct VertexDeclaration
@@ -88,6 +90,7 @@ void render_resources_destroy_index_buffer(RenderResources *resources, Resource 
 RawBuffer *render_resources_raw_buffer(RenderResources *resources, Resource resource);
 Resource render_resources_create_raw_buffer(RenderResources *resources, void *buffer, unsigned size);
 void render_resources_destroy_raw_buffer(RenderResources *resources, Resource resource);
+void render_resource_raw_buffer_update(RenderResources *resources, Resource resource, void *buffer, unsigned size);
 
 typedef struct VertexElement
 {

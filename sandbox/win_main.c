@@ -30,6 +30,25 @@ struct Program
 	Allocator *allocator;
 };
 
+typedef struct Timer
+{
+	LARGE_INTEGER timer;
+} Timer;
+
+float delta_time(Timer *timer)
+{
+	// Pretty much copy-paste from msdn.
+	LARGE_INTEGER counter, frequency;
+	QueryPerformanceCounter(&counter);
+	QueryPerformanceFrequency(&frequency);
+	LONGLONG elapsed_time = counter.QuadPart - timer->timer.QuadPart;
+	elapsed_time *= 1000000;
+	elapsed_time /= frequency.QuadPart;
+	timer->timer = counter;
+	float dt = elapsed_time / 1000000.0f;
+	return dt;
+}
+
 int not_quit = 1;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -62,10 +81,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	const unsigned stride = 6 * sizeof(float);
 	float vertex_buffer[] = {
-		-0.9f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-		-0.9f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-		-0.1f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
-		-0.1f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
+		0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
+		0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
 	};
 	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
@@ -81,10 +100,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	Resource ib_resource = render_resources_create_index_buffer(resources, index_buffer, n_indices, index_stride);
 
 	float raw_buffer[] = {
-		0.5f, -0.1f,
-		0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f,
+		0.5f, -0.1f, 1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f,
@@ -118,11 +135,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		\
 		VS_OUTPUT vs_main(VS_INPUT input) \
 		{ \
-			uint byte_address = input.instance_id * 4 * 2;\
-			float2 position = asfloat(buffer.Load2(byte_address)); \
+			uint pos_byte_address = input.instance_id * 4 * 6;\
+			uint col_byte_address = pos_byte_address + 4 * 2; \
+			float2 position = asfloat(buffer.Load2(pos_byte_address)); \
+			float3 color = asfloat(buffer.Load3(col_byte_address)); \
 			VS_OUTPUT output; \
 			output.position = input.position + float4(position, 0.0f, 0.0f); \
-			output.color = input.color;\
+			output.color = color;\
 			return output; \
 		}; \
 		\
@@ -155,15 +174,29 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	RenderPackage *render_package = create_render_package(program.allocator, render_resources, n_resources, n_vertices, n_indices);
 	render_package->n_instances = 2;
 
+	Timer timer;
+	float dt = 0.0f;
+	float direction = 0.1f;
+	delta_time(&timer);
 	while (not_quit) {
+		dt = delta_time(&timer);
+
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 
+		if (raw_buffer[0] < -1.0f || raw_buffer[0] > 1.0f) {
+			direction *= -1.0f;
+		}
+
+		raw_buffer[0] += direction * dt;
+
+		render_resource_raw_buffer_update(resources, rb_resource, raw_buffer, sizeof(raw_buffer));
+
 		d3d11_device_clear(program.device);
 		d3d11_device_render(program.device, render_package);
-		d3d11_device_present(program.device);
+		d3d11_device_present(program.device);		
 	}
 
 	render_resources_destroy_raw_buffer(resources, rb_resource);

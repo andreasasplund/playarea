@@ -162,7 +162,7 @@ RenderResources *d3d11_device_render_resources(D3D11Device *device)
 
 void d3d11_device_present(D3D11Device *device)
 {
-	HRESULT hr = IDXGISwapChain_Present(device->swap_chain, 0, 0);
+	HRESULT hr = IDXGISwapChain_Present(device->swap_chain, 1, 0);
 	if (FAILED(hr)) {
 		assert(0);
 		return;
@@ -183,7 +183,7 @@ void d3d11_device_clear(D3D11Device *device)
 		{ 0.0, 0.0, 1.0, 1.0 },
 		{ 0.0, 0.0, 0.0, 1.0 }
 	};
-	ID3D11DeviceContext_ClearRenderTargetView(device->immediate_context, device->swap_chain_rtv, colors[0].rgba);
+	ID3D11DeviceContext_ClearRenderTargetView(device->immediate_context, device->swap_chain_rtv, colors[3].rgba);
 }
 
 void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
