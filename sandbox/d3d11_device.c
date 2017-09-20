@@ -193,6 +193,7 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	VertexDeclaration *vd = NULL;
 	VertexShader *vs = NULL;
 	PixelShader *ps = NULL;
+	RawBuffer *rb = NULL;
 	const unsigned n_resources = render_package->n_resources;
 	for (unsigned i = 0; i < n_resources; ++i) {
 		Resource resource = render_package->resources[i];
@@ -214,6 +215,9 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 			break;
 		case RESOURCE_PIXEL_SHADER:
 			ps = pixel_shader(device->resources, resource);
+			break;
+		case RESOURCE_RAW_BUFFER:
+			rb = raw_buffer(device->resources, resource);
 			break;
 		}
 	}
@@ -238,6 +242,11 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	ID3D11DeviceContext_VSSetShader(device->immediate_context, vs->shader, NULL, 0);
 	ID3D11DeviceContext_PSSetShader(device->immediate_context, ps->shader, NULL, 0);
 
+	if (rb)
+		ID3D11DeviceContext_VSSetShaderResources(device->immediate_context, 0, 1, &rb->srv);
+	else
+		ID3D11DeviceContext_VSSetShaderResources(device->immediate_context, 0, 0, NULL);
+
 	UINT stride = vb->stride;
 	UINT offset = 0;
 	ID3D11DeviceContext_IASetVertexBuffers(device->immediate_context, 0, 1, &vb->buffer, &stride, &offset);
@@ -250,8 +259,8 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	ID3D11DeviceContext_RSSetState(device->immediate_context, device->rasterizer_state);
 
 	if (ib) {
-		ID3D11DeviceContext_DrawIndexed(device->immediate_context, render_package->n_indices, 0, 0);
+		ID3D11DeviceContext_DrawIndexedInstanced(device->immediate_context, render_package->n_indices, render_package->n_instances, 0, 0, 0);
 	} else {
-		ID3D11DeviceContext_Draw(device->immediate_context, render_package->n_vertices, 0);
+		ID3D11DeviceContext_DrawInstanced(device->immediate_context, render_package->n_vertices, render_package->n_instances, 0, 0);
 	}
 }

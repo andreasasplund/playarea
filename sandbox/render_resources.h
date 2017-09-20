@@ -16,7 +16,7 @@ typedef struct Resource
 	unsigned handle;
 } Resource;
 
-enum ResourceTypes { RESOURCE_NOT_INITIALIZED = 0, RESOURCE_VERTEX_BUFFER, RESOURCE_INDEX_BUFFER, RESOURCE_VERTEX_DECLARATION, RESOURCE_VERTEX_SHADER, RESOURCE_PIXEL_SHADER };
+enum ResourceTypes { RESOURCE_NOT_INITIALIZED = 0, RESOURCE_VERTEX_BUFFER, RESOURCE_INDEX_BUFFER, RESOURCE_VERTEX_DECLARATION, RESOURCE_VERTEX_SHADER, RESOURCE_PIXEL_SHADER, RESOURCE_RAW_BUFFER };
 
 inline unsigned resource_type(Resource resource)
 {
@@ -44,6 +44,12 @@ typedef struct Buffer
 	ID3D11Buffer *buffer;
 	unsigned stride;
 } Buffer;
+
+typedef struct RawBuffer
+{
+	ID3D11Buffer *buffer;
+	ID3D11ShaderResourceView *srv;
+} RawBuffer;
 
 typedef struct VertexDeclaration
 {
@@ -74,6 +80,10 @@ Buffer *index_buffer(RenderResources *resources, Resource resource);
 Resource create_index_buffer(RenderResources *resources, void *buffer, unsigned indices, unsigned stride);
 void destroy_index_buffer(RenderResources *resources, Resource resource);
 
+RawBuffer *raw_buffer(RenderResources *resources, Resource resource);
+Resource create_raw_buffer(RenderResources *resources, void *buffer, unsigned size);
+void destroy_raw_buffer(RenderResources *resources, Resource resource);
+
 typedef struct VertexElement
 {
 	unsigned semantic;
@@ -99,6 +109,7 @@ typedef struct RenderPackage
 	unsigned n_resources;
 	unsigned n_vertices;
 	unsigned n_indices;
+	unsigned n_instances;
 } RenderPackage;
 
 RenderPackage *create_render_package(Allocator *allocator, const Resource *resources, unsigned n_resources, unsigned n_vertices, unsigned n_indices);

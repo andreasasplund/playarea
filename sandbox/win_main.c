@@ -72,19 +72,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	RenderResources *resources = d3d11_device_render_resources(program.device);
 	Resource vb_resource = create_vertex_buffer(resources, vertex_buffer, n_vertices, stride);
 
-	float vertex_buffer2[] = {
-		0.1f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.1f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-		0.9f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
-
-		0.9f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
-		0.1f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-		0.9f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
-	};
-	const unsigned n_vertices2 = sizeof(vertex_buffer2) / stride;
-
-	Resource vb2_resource = create_vertex_buffer(resources, vertex_buffer2, n_vertices2, stride);
-
 	UINT16 index_buffer[] = {
 		0, 1, 2,
 		2, 1, 3,
@@ -92,6 +79,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	const unsigned n_indices = sizeof(index_buffer) / sizeof(index_buffer[0]);
 	const unsigned index_stride = 16;
 	Resource ib_resource = create_index_buffer(resources, index_buffer, n_indices, index_stride);
+
+	float raw_buffer[] = {
+		0.5f, -0.1f,
+		0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+	};
+	const unsigned raw_buffer_size = sizeof(raw_buffer);
+	Resource rb_resource = create_raw_buffer(resources, raw_buffer, raw_buffer_size);
 
 	VertexElement elements[2] = {
 		{.semantic = VS_POSITION,.type = VT_FLOAT3},
@@ -102,10 +101,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	const char vertex_shader_program[] =
 		" \
+		ByteAddressBuffer buffer : t0; \
 		struct VS_INPUT \
 		{ \
 			float4 position : POSITION;\
 			float3 color : TEXCOORD0;\
+			uint vertex_id : SV_VertexID;\
+			uint instance_id : SV_InstanceID;\
 		};\
 		\
 		struct VS_OUTPUT \
@@ -116,9 +118,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		\
 		VS_OUTPUT vs_main(VS_INPUT input) \
 		{ \
+			uint byte_address = input.instance_id * 4 * 2;\
+			float2 position = asfloat(buffer.Load2(byte_address)); \
 			VS_OUTPUT output; \
-			output.position = input.position; \
-			output.color = input.color; \
+			output.position = input.position + float4(position, 0.0f, 0.0f); \
+			output.color = input.color;\
 			return output; \
 		}; \
 		\
@@ -138,56 +142,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	Resource vs_resource = create_shader_program(resources, SPT_VERTEX, vertex_shader_program, sizeof(vertex_shader_program));
 	Resource ps_resource = create_shader_program(resources, SPT_PIXEL, vertex_shader_program, sizeof(vertex_shader_program));
 
-	const char vertex_shader_program2[] =
-		" \
-		struct VS_INPUT \
-		{ \
-			float4 position : POSITION;\
-		};\
-		\
-		struct VS_OUTPUT \
-		{ \
-			float4 position : SV_POSITION;\
-		};\
-		\
-		VS_OUTPUT vs_main(VS_INPUT input) \
-		{ \
-			VS_OUTPUT output; \
-			output.position = input.position; \
-			return output; \
-		}; \
-		\
-		struct PS_OUTPUT \
-		{ \
-			float4 color : SV_TARGET0; \
-		}; \
-		\
-		PS_OUTPUT ps_main(VS_OUTPUT input) \
-		{ \
-			PS_OUTPUT output; \
-			output.color = float4(1.0f, 0.0f, 1.0f, 1.0f); \
-			return output; \
-		}; \
-		";
-	Resource vs_resource2 = create_shader_program(resources, SPT_VERTEX, vertex_shader_program2, sizeof(vertex_shader_program2));
-	Resource ps_resource2 = create_shader_program(resources, SPT_PIXEL, vertex_shader_program2, sizeof(vertex_shader_program2));
-
 	Resource render_resources[] = {
 		vb_resource,
 		ib_resource,
 		vd_resource,
 		vs_resource,
 		ps_resource,
+		rb_resource,
 	};
 	const unsigned n_resources = sizeof(render_resources) / sizeof(render_resources[0]);
 
 	RenderPackage *render_package = create_render_package(program.allocator, render_resources, n_resources, n_vertices, n_indices);
-
-	render_resources[0] = vb2_resource;
-	render_resources[1] = resource_encode_handle_type(0, 0);
-	render_resources[3] = vs_resource2;
-	render_resources[4] = ps_resource2;
-	RenderPackage *render_package2 = create_render_package(program.allocator, render_resources, n_resources, n_vertices2, n_indices);
+	render_package->n_instances = 2;
 
 	while (not_quit) {
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
@@ -197,10 +163,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		d3d11_device_clear(program.device);
 		d3d11_device_render(program.device, render_package);
-		d3d11_device_render(program.device, render_package2);
 		d3d11_device_present(program.device);
 	}
 
+	destroy_raw_buffer(resources, rb_resource);
 	destroy_shader_program(resources, vs_resource);
 	destroy_shader_program(resources, ps_resource);
 	destroy_vertex_declaration(resources, vd_resource);
@@ -208,7 +174,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	destroy_vertex_buffer(resources, vb_resource);
 
 	destroy_render_package(render_package);
-	destroy_render_package(render_package2);
 
 	d3d11_device_destroy(program.allocator, program.device);
 	destroy_allocator(program.allocator);

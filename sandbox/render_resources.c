@@ -16,6 +16,9 @@ struct RenderResources
 	Buffer *index_buffers;
 	unsigned *free_index_buffers;
 
+	RawBuffer *raw_buffers;
+	unsigned *free_raw_buffers;
+
 	VertexDeclaration *vertex_declarations;
 	unsigned *free_vertex_declarations;
 
@@ -71,6 +74,28 @@ void release_index_buffer_handle(RenderResources *resources, Resource resource)
 	assert(resource_type(resource) == RESOURCE_INDEX_BUFFER);
 	unsigned h = resource_handle(resource);
 	sb_push(resources->free_index_buffers, h);
+}
+
+Resource allocate_raw_buffer_handle(RenderResources *resources)
+{
+	if (sb_count(resources->free_raw_buffers)) {
+		unsigned h = sb_last(resources->free_raw_buffers);
+		sb_pop(resources->free_raw_buffers);
+		return resource_encode_handle_type(h, RESOURCE_RAW_BUFFER);
+	}
+
+	unsigned h = sb_count(resources->raw_buffers);
+	RawBuffer buffer = { .buffer = NULL, .srv = NULL };
+	sb_push(resources->raw_buffers, buffer);
+
+	return resource_encode_handle_type(h, RESOURCE_RAW_BUFFER);
+}
+
+void release_raw_buffer_handle(RenderResources *resources, Resource resource)
+{
+	assert(resource_type(resource) == RESOURCE_RAW_BUFFER);
+	unsigned h = resource_handle(resource);
+	sb_push(resources->free_raw_buffers, h);
 }
 
 Resource allocate_vertex_declaration_handle(RenderResources *resources)
@@ -162,6 +187,14 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	}
 
 	{
+		sb_create(allocator, resources->raw_buffers, 10);
+		sb_create(allocator, resources->free_raw_buffers, 10);
+		Resource first_rb = allocate_raw_buffer_handle(resources);
+		assert(resource_handle(first_rb) == 0);
+		(void)first_rb;
+	}
+
+	{
 		sb_create(allocator, resources->vertex_declarations, 10);
 		sb_create(allocator, resources->free_vertex_declarations, 10);
 		Resource first_vd = allocate_vertex_declaration_handle(resources);
@@ -206,6 +239,8 @@ void destroy_resources(Allocator *allocator, RenderResources *resources)
 	sb_free(resources->free_vertex_buffers);
 	sb_free(resources->index_buffers);
 	sb_free(resources->free_index_buffers);
+	sb_free(resources->raw_buffers);
+	sb_free(resources->free_raw_buffers);
 	sb_free(resources->vertex_declarations);
 	sb_free(resources->free_vertex_declarations);
 	sb_free(resources->vertex_shaders);
@@ -298,6 +333,58 @@ void destroy_index_buffer(RenderResources *resources, Resource resource)
 	ID3D11Buffer_Release(ib->buffer);
 
 	release_index_buffer_handle(resources, resource);
+}
+
+RawBuffer *raw_buffer(RenderResources *resources, Resource resource)
+{
+	return &resources->raw_buffers[resource_handle(resource)];
+}
+
+Resource create_raw_buffer(RenderResources *resources, void *buffer, unsigned size)
+{
+	D3D11_BUFFER_DESC desc;
+	desc.ByteWidth = size;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	desc.StructureByteStride = 0;
+
+	D3D11_SUBRESOURCE_DATA sub_desc;
+	sub_desc.SysMemPitch = 0;
+	sub_desc.SysMemSlicePitch = 0;
+	sub_desc.pSysMem = buffer;
+
+	Resource rb_res = allocate_raw_buffer_handle(resources);
+
+	RawBuffer *rb = raw_buffer(resources, rb_res);
+	HRESULT hr = ID3D11Device_CreateBuffer(resources->d3d_device, &desc, buffer ? &sub_desc : 0, &rb->buffer);
+	assert(SUCCEEDED(hr));
+
+	ID3D11Resource *resource;
+	ID3D11Buffer_QueryInterface(rb->buffer, &IID_ID3D11Resource, &resource);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+	srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+	srv_desc.BufferEx.FirstElement = 0;
+	srv_desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
+	srv_desc.BufferEx.NumElements = size / sizeof(unsigned);
+	hr = ID3D11Device_CreateShaderResourceView(resources->d3d_device, resource, &srv_desc, &rb->srv);
+
+	ID3D11Resource_Release(resource);
+	return rb_res;
+}
+
+void destroy_raw_buffer(RenderResources *resources, Resource resource)
+{
+	assert(resource_type(resource) == RESOURCE_RAW_BUFFER);
+
+	RawBuffer *rb = raw_buffer(resources, resource);
+	ID3D11Buffer_Release(rb->buffer);
+	ID3D11ShaderResourceView_Release(rb->srv);
+
+	release_raw_buffer_handle(resources, resource);
 }
 
 VertexDeclaration *vertex_declaration(RenderResources *resources, Resource resource)
