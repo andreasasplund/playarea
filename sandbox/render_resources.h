@@ -5,11 +5,11 @@
 
 #include <d3d11.h>
 
-typedef struct Resources Resources;
+typedef struct RenderResources RenderResources;
 typedef struct Allocator Allocator;
 
-void create_resources(Allocator *allocator, ID3D11Device *d3d_device, Resources **resources);
-void destroy_resources(Allocator *allocator, Resources *resources);
+void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderResources **resources);
+void destroy_resources(Allocator *allocator, RenderResources *resources);
 
 typedef struct Resource
 {
@@ -66,13 +66,13 @@ typedef struct InputLayout
 	ID3D11InputLayout *input_layout;
 } InputLayout;
 
-Buffer *vertex_buffer(Resources *resources, Resource resource);
-Resource create_vertex_buffer(Resources *resources, void *buffer, unsigned vertices, unsigned stride);
-void destroy_vertex_buffer(Resources *resources, Resource resource);
+Buffer *vertex_buffer(RenderResources *resources, Resource resource);
+Resource create_vertex_buffer(RenderResources *resources, void *buffer, unsigned vertices, unsigned stride);
+void destroy_vertex_buffer(RenderResources *resources, Resource resource);
 
-Buffer *index_buffer(Resources *resources, Resource resource);
-Resource create_index_buffer(Resources *resources, void *buffer, unsigned indices, unsigned stride);
-void destroy_index_buffer(Resources *resources, Resource resource);
+Buffer *index_buffer(RenderResources *resources, Resource resource);
+Resource create_index_buffer(RenderResources *resources, void *buffer, unsigned indices, unsigned stride);
+void destroy_index_buffer(RenderResources *resources, Resource resource);
 
 typedef struct VertexElement
 {
@@ -81,17 +81,17 @@ typedef struct VertexElement
 } VertexElement;
 enum VertexSemantic { VS_POSITION, VS_COLOR, VS_TEXCOORD };
 enum VertexType { VT_FLOAT3, VT_FLOAT4 };
-VertexDeclaration *vertex_declaration(Resources *resources, Resource resource);
-Resource create_vertex_declaration(Resources *resources, VertexElement *vertex_elements, unsigned n_vertex_elements);
-void destroy_vertex_declaration(Resources *resources, Resource resource);
+VertexDeclaration *vertex_declaration(RenderResources *resources, Resource resource);
+Resource create_vertex_declaration(RenderResources *resources, VertexElement *vertex_elements, unsigned n_vertex_elements);
+void destroy_vertex_declaration(RenderResources *resources, Resource resource);
 
 enum ShaderProgramType { SPT_VERTEX = 0, SPT_PIXEL };
-VertexShader *vertex_shader(Resources *resources, Resource resource);
-PixelShader *pixel_shader(Resources *resources, Resource resource);
-Resource create_shader_program(Resources *resources, unsigned shader_program_type, const char *program, unsigned program_length);
-void destroy_shader_program(Resources *resources, Resource shader_program);
+VertexShader *vertex_shader(RenderResources *resources, Resource resource);
+PixelShader *pixel_shader(RenderResources *resources, Resource resource);
+Resource create_shader_program(RenderResources *resources, unsigned shader_program_type, const char *program, unsigned program_length);
+void destroy_shader_program(RenderResources *resources, Resource shader_program);
 
-InputLayout *input_layout(Resources *resources, Resource vertex_stream_resource, Resource vertex_declaration_resource);
+InputLayout *input_layout(RenderResources *resources, Resource vertex_stream_resource, Resource vertex_declaration_resource);
 typedef struct RenderPackage
 {
 	Allocator *allocator;

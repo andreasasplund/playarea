@@ -13,10 +13,10 @@
     <ClCompile Include="..\..\sandbox\d3d11_device.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\sandbox\resources.c">
+    <ClCompile Include="..\..\sandbox\win_main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\sandbox\win_main.c">
+    <ClCompile Include="..\..\sandbox\render_resources.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -27,10 +27,10 @@
     <ClInclude Include="..\..\sandbox\d3d11_device.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sandbox\resources.h">
+    <ClInclude Include="..\..\sandbox\stretchy_buffer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sandbox\stretchy_buffer.h">
+    <ClInclude Include="..\..\sandbox\render_resources.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

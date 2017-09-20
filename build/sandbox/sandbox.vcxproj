@@ -21,13 +21,13 @@
   <ItemGroup>
     <ClCompile Include="..\..\sandbox\allocator.c" />
     <ClCompile Include="..\..\sandbox\d3d11_device.c" />
-    <ClCompile Include="..\..\sandbox\resources.c" />
+    <ClCompile Include="..\..\sandbox\render_resources.c" />
     <ClCompile Include="..\..\sandbox\win_main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\sandbox\allocator.h" />
     <ClInclude Include="..\..\sandbox\d3d11_device.h" />
-    <ClInclude Include="..\..\sandbox\resources.h" />
+    <ClInclude Include="..\..\sandbox\render_resources.h" />
     <ClInclude Include="..\..\sandbox\stretchy_buffer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

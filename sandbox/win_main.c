@@ -9,7 +9,7 @@
 #include "d3d11_device.h"
 #include "allocator.h"
 #include "stretchy_buffer.h"
-#include "resources.h"
+#include "render_resources.h"
 
 #define MAX_LOADSTRING 100
 
@@ -69,7 +69,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	};
 	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
-	Resources *resources = d3d11_resources(program.device);
+	RenderResources *resources = d3d11_device_render_resources(program.device);
 	Resource vb_resource = create_vertex_buffer(resources, vertex_buffer, n_vertices, stride);
 
 	float vertex_buffer2[] = {
@@ -210,7 +210,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	destroy_render_package(render_package);
 	destroy_render_package(render_package2);
 
-	shutdown_d3d11_device(program.allocator, program.device);
+	d3d11_device_destroy(program.allocator, program.device);
 	destroy_allocator(program.allocator);
 
 	return (int) msg.wParam;
@@ -269,9 +269,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow, struct Program *program)
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
-   if (initialize_d3d11_device(program->allocator, hWnd, &program->device) < 0)
-	   return FALSE;
-
+   d3d11_device_create(program->allocator, hWnd, &program->device);
    return TRUE;
 }
 

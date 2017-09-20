@@ -7,7 +7,7 @@
 
 #include "allocator.h"
 #include "stretchy_buffer.h"
-#include "resources.h"
+#include "render_resources.h"
 
 struct D3D11Device
 {
@@ -19,7 +19,7 @@ struct D3D11Device
 	ID3D11Debug *debug_layer;
 
 	Allocator *allocator;
-	Resources *resources;
+	RenderResources *resources;
 
 	// Default states
 	ID3D11BlendState *blend_state;
@@ -30,19 +30,25 @@ struct D3D11Device
 	ID3D11RenderTargetView *swap_chain_rtv;
 };
 
-int initialize_d3d11_device(Allocator *allocator, HWND window, D3D11Device **d3d11_device)
+void d3d11_device_create(Allocator *allocator, HWND window, D3D11Device **d3d11_device)
 {
 	D3D11Device *device = *d3d11_device = allocator_realloc(allocator, NULL, sizeof(D3D11Device), 16);
 	HRESULT hr = CreateDXGIFactory1(&IID_IDXGIFactory1, &device->dxgi_factory);
-	if (FAILED(hr))
-		return -1;
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
 
-	if (FAILED(IDXGIFactory1_EnumAdapters(device->dxgi_factory, 0, &device->adapter) != DXGI_ERROR_NOT_FOUND))
-		return -1;
+	if (FAILED(IDXGIFactory1_EnumAdapters(device->dxgi_factory, 0, &device->adapter) != DXGI_ERROR_NOT_FOUND)) {
+		assert(0);
+		return;
+	}
 
 	DXGI_ADAPTER_DESC desc;
-	if (FAILED(IDXGIAdapter_GetDesc(device->adapter, &desc)))
-		return -1;
+	if (FAILED(IDXGIAdapter_GetDesc(device->adapter, &desc))) {
+		assert(0);
+		return;
+	}
 
 	DXGI_SWAP_CHAIN_DESC swap_chain_desc = {
 		.BufferCount = 2,
@@ -63,13 +69,16 @@ int initialize_d3d11_device(Allocator *allocator, HWND window, D3D11Device **d3d
 	D3D_FEATURE_LEVEL feature_level = D3D_FEATURE_LEVEL_11_1;
 	D3D_FEATURE_LEVEL feature_levels[5] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,	D3D_FEATURE_LEVEL_9_3 };
 	hr = D3D11CreateDeviceAndSwapChain(device->adapter, D3D_DRIVER_TYPE_UNKNOWN, 0, D3D11_CREATE_DEVICE_DEBUG, feature_levels, 5, D3D11_SDK_VERSION, &swap_chain_desc, &device->swap_chain, &device->device, &feature_level, &device->immediate_context);
-	if (FAILED(hr))
-		return -1;
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
 
 	hr = ID3D11Device_QueryInterface(device->device, &IID_ID3D11Debug, &device->debug_layer);
-	if (FAILED(hr))
-		return -1;
-
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
 
 	device->allocator = allocator;
 
@@ -86,13 +95,27 @@ int initialize_d3d11_device(Allocator *allocator, HWND window, D3D11Device **d3d
 	D3D11_DEPTH_STENCIL_DESC depth_stencil_desc = { .DepthEnable = FALSE, .DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D11_COMPARISON_ALWAYS };
 	D3D11_RASTERIZER_DESC rasterizer_desc = { .FillMode = D3D11_FILL_SOLID,.CullMode = D3D11_CULL_NONE };
 
-	ID3D11Device_CreateBlendState(device->device, &blend_state_desc, &device->blend_state);
-	ID3D11Device_CreateDepthStencilState(device->device, &depth_stencil_desc, &device->depth_stencil_state);
-	ID3D11Device_CreateRasterizerState(device->device, &rasterizer_desc, &device->rasterizer_state);
+	hr = ID3D11Device_CreateBlendState(device->device, &blend_state_desc, &device->blend_state);
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
+	hr = ID3D11Device_CreateDepthStencilState(device->device, &depth_stencil_desc, &device->depth_stencil_state);
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
+	hr = ID3D11Device_CreateRasterizerState(device->device, &rasterizer_desc, &device->rasterizer_state);
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
 
 	hr = IDXGISwapChain_GetBuffer(device->swap_chain, 0, &IID_ID3D11Resource, &device->swap_chain_texture);
-	if (FAILED(hr))
-		return -1;
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
 
 	D3D11_RENDER_TARGET_VIEW_DESC rt_desc;
 	rt_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
@@ -102,15 +125,15 @@ int initialize_d3d11_device(Allocator *allocator, HWND window, D3D11Device **d3d
 	rt_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	hr = ID3D11Device_CreateRenderTargetView(device->device, device->swap_chain_texture, &rt_desc, &device->swap_chain_rtv);
-	if (FAILED(hr))
-		return -1;
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
 
 	create_resources(allocator, device->device, &device->resources);
-
-	return 0;
 }
 
-void shutdown_d3d11_device(Allocator *allocator, D3D11Device *device)
+void d3d11_device_destroy(Allocator *allocator, D3D11Device *device)
 {
 	destroy_resources(allocator, device->resources);
 
@@ -131,25 +154,26 @@ void shutdown_d3d11_device(Allocator *allocator, D3D11Device *device)
 	allocator_realloc(allocator, device, 0, 0);
 }
 
-Resources *d3d11_resources(D3D11Device *device)
+RenderResources *d3d11_device_render_resources(D3D11Device *device)
 {
 	return device->resources;
 }
 
-int d3d11_device_present(D3D11Device *device)
+void d3d11_device_present(D3D11Device *device)
 {
-	auto hr = IDXGISwapChain_Present(device->swap_chain, 0, 0);
-	if (FAILED(hr))
-		return -1;
-
-	return 0;
+	HRESULT hr = IDXGISwapChain_Present(device->swap_chain, 0, 0);
+	if (FAILED(hr)) {
+		assert(0);
+		return;
+	}
 }
 
 void d3d11_device_clear(D3D11Device *device)
 {
 	static unsigned color_index = 0;
 	color_index = color_index++ % 3;
-	struct Color {
+	struct Color
+	{
 		float rgba[4];
 	};
 	struct Color colors[] = {
