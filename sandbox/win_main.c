@@ -70,7 +70,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
 	RenderResources *resources = d3d11_device_render_resources(program.device);
-	Resource vb_resource = create_vertex_buffer(resources, vertex_buffer, n_vertices, stride);
+	Resource vb_resource = render_resources_create_vertex_buffer(resources, vertex_buffer, n_vertices, stride);
 
 	UINT16 index_buffer[] = {
 		0, 1, 2,
@@ -78,7 +78,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	};
 	const unsigned n_indices = sizeof(index_buffer) / sizeof(index_buffer[0]);
 	const unsigned index_stride = 16;
-	Resource ib_resource = create_index_buffer(resources, index_buffer, n_indices, index_stride);
+	Resource ib_resource = render_resources_create_index_buffer(resources, index_buffer, n_indices, index_stride);
 
 	float raw_buffer[] = {
 		0.5f, -0.1f,
@@ -90,14 +90,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		0.0f, 0.0f, 0.0f, 0.0f,
 	};
 	const unsigned raw_buffer_size = sizeof(raw_buffer);
-	Resource rb_resource = create_raw_buffer(resources, raw_buffer, raw_buffer_size);
+	Resource rb_resource = render_resources_create_raw_buffer(resources, raw_buffer, raw_buffer_size);
 
 	VertexElement elements[2] = {
 		{.semantic = VS_POSITION,.type = VT_FLOAT3},
 		{.semantic = VS_TEXCOORD,.type = VT_FLOAT3},
 	};
 
-	Resource vd_resource = create_vertex_declaration(resources, elements, 2);
+	Resource vd_resource = render_resources_create_vertex_declaration(resources, elements, 2);
 
 	const char vertex_shader_program[] =
 		" \
@@ -139,8 +139,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			return output; \
 		}; \
 		";
-	Resource vs_resource = create_shader_program(resources, SPT_VERTEX, vertex_shader_program, sizeof(vertex_shader_program));
-	Resource ps_resource = create_shader_program(resources, SPT_PIXEL, vertex_shader_program, sizeof(vertex_shader_program));
+	Resource vs_resource = render_resources_create_shader_program(resources, SPT_VERTEX, vertex_shader_program, sizeof(vertex_shader_program));
+	Resource ps_resource = render_resources_create_shader_program(resources, SPT_PIXEL, vertex_shader_program, sizeof(vertex_shader_program));
 
 	Resource render_resources[] = {
 		vb_resource,
@@ -166,12 +166,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		d3d11_device_present(program.device);
 	}
 
-	destroy_raw_buffer(resources, rb_resource);
-	destroy_shader_program(resources, vs_resource);
-	destroy_shader_program(resources, ps_resource);
-	destroy_vertex_declaration(resources, vd_resource);
-	destroy_index_buffer(resources, ib_resource);
-	destroy_vertex_buffer(resources, vb_resource);
+	render_resources_destroy_raw_buffer(resources, rb_resource);
+	render_resources_destroy_shader_program(resources, vs_resource);
+	render_resources_destroy_shader_program(resources, ps_resource);
+	render_resources_destroy_vertex_declaration(resources, vd_resource);
+	render_resources_destroy_index_buffer(resources, ib_resource);
+	render_resources_destroy_vertex_buffer(resources, vb_resource);
 
 	destroy_render_package(render_package);
 

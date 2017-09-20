@@ -32,7 +32,7 @@ struct RenderResources
 	UINT64 *input_layout_hashes;
 };
 
-Resource allocate_vertex_buffer_handle(RenderResources *resources)
+Resource render_resources_allocate_vertex_buffer_handle(RenderResources *resources)
 {
 	if (sb_count(resources->free_vertex_buffers)) {
 		unsigned h = sb_last(resources->free_vertex_buffers);
@@ -47,14 +47,14 @@ Resource allocate_vertex_buffer_handle(RenderResources *resources)
 	return resource_encode_handle_type(h, RESOURCE_VERTEX_BUFFER);
 }
 
-void release_vertex_buffer_handle(RenderResources *resources, Resource resource)
+void render_resources_release_vertex_buffer_handle(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_VERTEX_BUFFER);
 	unsigned h = resource_handle(resource);
 	sb_push(resources->free_vertex_buffers, h);
 }
 
-Resource allocate_index_buffer_handle(RenderResources *resources)
+Resource render_resources_allocate_index_buffer_handle(RenderResources *resources)
 {
 	if (sb_count(resources->free_index_buffers)) {
 		unsigned h = sb_last(resources->free_index_buffers);
@@ -69,14 +69,14 @@ Resource allocate_index_buffer_handle(RenderResources *resources)
 	return resource_encode_handle_type(h, RESOURCE_INDEX_BUFFER);
 }
 
-void release_index_buffer_handle(RenderResources *resources, Resource resource)
+void render_resources_release_index_buffer_handle(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_INDEX_BUFFER);
 	unsigned h = resource_handle(resource);
 	sb_push(resources->free_index_buffers, h);
 }
 
-Resource allocate_raw_buffer_handle(RenderResources *resources)
+Resource render_resources_allocate_raw_buffer_handle(RenderResources *resources)
 {
 	if (sb_count(resources->free_raw_buffers)) {
 		unsigned h = sb_last(resources->free_raw_buffers);
@@ -91,14 +91,14 @@ Resource allocate_raw_buffer_handle(RenderResources *resources)
 	return resource_encode_handle_type(h, RESOURCE_RAW_BUFFER);
 }
 
-void release_raw_buffer_handle(RenderResources *resources, Resource resource)
+void render_resources_release_raw_buffer_handle(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_RAW_BUFFER);
 	unsigned h = resource_handle(resource);
 	sb_push(resources->free_raw_buffers, h);
 }
 
-Resource allocate_vertex_declaration_handle(RenderResources *resources)
+Resource render_resources_allocate_vertex_declaration_handle(RenderResources *resources)
 {
 	if (sb_count(resources->free_vertex_declarations)) {
 		unsigned h = sb_last(resources->free_vertex_declarations);
@@ -113,14 +113,14 @@ Resource allocate_vertex_declaration_handle(RenderResources *resources)
 	return resource_encode_handle_type(h, RESOURCE_VERTEX_DECLARATION);
 }
 
-void release_vertex_declaration_handle(RenderResources *resources, Resource resource)
+void render_resources_release_vertex_declaration_handle(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_VERTEX_DECLARATION);
 	unsigned h = resource_handle(resource);
 	sb_push(resources->free_vertex_declarations, h);
 }
 
-Resource allocate_vertex_shader_handle(RenderResources *resources)
+Resource render_resources_allocate_vertex_shader_handle(RenderResources *resources)
 {
 	if (sb_count(resources->free_vertex_shaders)) {
 		unsigned h = sb_last(resources->free_vertex_shaders);
@@ -135,14 +135,14 @@ Resource allocate_vertex_shader_handle(RenderResources *resources)
 	return resource_encode_handle_type(h, RESOURCE_VERTEX_SHADER);
 }
 
-void release_vertex_shader_handle(RenderResources *resources, Resource resource)
+void render_resources_release_vertex_shader_handle(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_VERTEX_SHADER);
 	unsigned h = resource_handle(resource);
 	sb_push(resources->free_vertex_shaders, h);
 }
 
-Resource allocate_pixel_shader_handle(RenderResources *resources)
+Resource render_resources_allocate_pixel_shader_handle(RenderResources *resources)
 {
 	if (sb_count(resources->free_pixel_shaders)) {
 		unsigned h = sb_last(resources->free_pixel_shaders);
@@ -157,14 +157,14 @@ Resource allocate_pixel_shader_handle(RenderResources *resources)
 	return resource_encode_handle_type(h, RESOURCE_PIXEL_SHADER);
 }
 
-void release_pixel_shader_handle(RenderResources *resources, Resource resource)
+void render_resources_release_pixel_shader_handle(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_PIXEL_SHADER);
 	unsigned h = resource_handle(resource);
 	sb_push(resources->free_pixel_shaders, h);
 }
 
-void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderResources **out_resources)
+void render_resources_create(Allocator *allocator, ID3D11Device *d3d_device, RenderResources **out_resources)
 {
 	RenderResources *resources = *out_resources = allocator_realloc(allocator, NULL, sizeof(RenderResources), 16);
 	resources->allocator = allocator;
@@ -173,7 +173,7 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	{
 		sb_create(allocator, resources->vertex_buffers, 10);
 		sb_create(allocator, resources->free_vertex_buffers, 10);
-		Resource first_vb = allocate_vertex_buffer_handle(resources);
+		Resource first_vb = render_resources_allocate_vertex_buffer_handle(resources);
 		assert(resource_handle(first_vb) == 0);
 		(void)first_vb;
 	}
@@ -181,7 +181,7 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	{
 		sb_create(allocator, resources->index_buffers, 10);
 		sb_create(allocator, resources->free_index_buffers, 10);
-		Resource first_ib = allocate_index_buffer_handle(resources);
+		Resource first_ib = render_resources_allocate_index_buffer_handle(resources);
 		assert(resource_handle(first_ib) == 0);
 		(void)first_ib;
 	}
@@ -189,7 +189,7 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	{
 		sb_create(allocator, resources->raw_buffers, 10);
 		sb_create(allocator, resources->free_raw_buffers, 10);
-		Resource first_rb = allocate_raw_buffer_handle(resources);
+		Resource first_rb = render_resources_allocate_raw_buffer_handle(resources);
 		assert(resource_handle(first_rb) == 0);
 		(void)first_rb;
 	}
@@ -197,7 +197,7 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	{
 		sb_create(allocator, resources->vertex_declarations, 10);
 		sb_create(allocator, resources->free_vertex_declarations, 10);
-		Resource first_vd = allocate_vertex_declaration_handle(resources);
+		Resource first_vd = render_resources_allocate_vertex_declaration_handle(resources);
 		assert(resource_handle(first_vd) == 0);
 		(void)first_vd;
 	}
@@ -205,7 +205,7 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	{
 		sb_create(allocator, resources->vertex_shaders, 10);
 		sb_create(allocator, resources->free_vertex_shaders, 10);
-		Resource first_vs = allocate_vertex_shader_handle(resources);
+		Resource first_vs = render_resources_allocate_vertex_shader_handle(resources);
 		assert(resource_handle(first_vs) == 0);
 		(void)first_vs;
 	}
@@ -213,7 +213,7 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	{
 		sb_create(allocator, resources->pixel_shaders, 10);
 		sb_create(allocator, resources->free_pixel_shaders, 10);
-		Resource first_ps = allocate_pixel_shader_handle(resources);
+		Resource first_ps = render_resources_allocate_pixel_shader_handle(resources);
 		assert(resource_handle(first_ps) == 0);
 		(void)first_ps;
 	}
@@ -223,12 +223,12 @@ void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderReso
 	}
 }
 
-void destroy_resources(Allocator *allocator, RenderResources *resources)
+void render_resources_destroy(Allocator *allocator, RenderResources *resources)
 {
-	release_vertex_buffer_handle(resources, resource_encode_handle_type(0, RESOURCE_VERTEX_BUFFER));
-	release_vertex_declaration_handle(resources, resource_encode_handle_type(0, RESOURCE_VERTEX_DECLARATION));
-	release_vertex_shader_handle(resources, resource_encode_handle_type(0, RESOURCE_VERTEX_SHADER));
-	release_pixel_shader_handle(resources, resource_encode_handle_type(0, RESOURCE_PIXEL_SHADER));
+	render_resources_release_vertex_buffer_handle(resources, resource_encode_handle_type(0, RESOURCE_VERTEX_BUFFER));
+	render_resources_release_vertex_declaration_handle(resources, resource_encode_handle_type(0, RESOURCE_VERTEX_DECLARATION));
+	render_resources_release_vertex_shader_handle(resources, resource_encode_handle_type(0, RESOURCE_VERTEX_SHADER));
+	render_resources_release_pixel_shader_handle(resources, resource_encode_handle_type(0, RESOURCE_PIXEL_SHADER));
 
 	const unsigned n_input_layouts = sb_count(resources->input_layouts);
 	for (unsigned i = 0; i < n_input_layouts; ++i) {
@@ -253,12 +253,12 @@ void destroy_resources(Allocator *allocator, RenderResources *resources)
 	allocator_realloc(allocator, resources, 0, 0);
 }
 
-Buffer *vertex_buffer(RenderResources *resources, Resource resource)
+Buffer *render_resources_vertex_buffer(RenderResources *resources, Resource resource)
 {
 	return &resources->vertex_buffers[resource_handle(resource)];
 }
 
-Resource create_vertex_buffer(RenderResources *resources, void *buffer, unsigned vertices, unsigned stride)
+Resource render_resources_create_vertex_buffer(RenderResources *resources, void *buffer, unsigned vertices, unsigned stride)
 {
 	D3D11_BUFFER_DESC desc;
 	desc.ByteWidth = vertices * stride;
@@ -273,9 +273,9 @@ Resource create_vertex_buffer(RenderResources *resources, void *buffer, unsigned
 	sub_desc.SysMemSlicePitch = 0;
 	sub_desc.pSysMem = buffer;
 
-	Resource vb_res = allocate_vertex_buffer_handle(resources);
+	Resource vb_res = render_resources_allocate_vertex_buffer_handle(resources);
 
-	Buffer *vb = vertex_buffer(resources, vb_res);
+	Buffer *vb = render_resources_vertex_buffer(resources, vb_res);
 	vb->stride = stride;
 
 	HRESULT hr = ID3D11Device_CreateBuffer(resources->d3d_device, &desc, buffer ? &sub_desc : 0, &vb->buffer);
@@ -284,22 +284,22 @@ Resource create_vertex_buffer(RenderResources *resources, void *buffer, unsigned
 	return vb_res;
 }
 
-void destroy_vertex_buffer(RenderResources *resources, Resource resource)
+void render_resources_destroy_vertex_buffer(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_VERTEX_BUFFER);
 
-	Buffer *vb = vertex_buffer(resources, resource);
+	Buffer *vb = render_resources_vertex_buffer(resources, resource);
 	ID3D11Buffer_Release(vb->buffer);
 
-	release_vertex_buffer_handle(resources, resource);
+	render_resources_release_vertex_buffer_handle(resources, resource);
 }
 
-Buffer *index_buffer(RenderResources *resources, Resource resource)
+Buffer *render_resources_index_buffer(RenderResources *resources, Resource resource)
 {
 	return &resources->index_buffers[resource_handle(resource)];
 }
 
-Resource create_index_buffer(RenderResources *resources, void *buffer, unsigned indices, unsigned stride)
+Resource render_resources_create_index_buffer(RenderResources *resources, void *buffer, unsigned indices, unsigned stride)
 {
 	D3D11_BUFFER_DESC desc;
 	desc.ByteWidth = indices * stride;
@@ -314,9 +314,9 @@ Resource create_index_buffer(RenderResources *resources, void *buffer, unsigned 
 	sub_desc.SysMemSlicePitch = 0;
 	sub_desc.pSysMem = buffer;
 
-	Resource ib_res = allocate_index_buffer_handle(resources);
+	Resource ib_res = render_resources_allocate_index_buffer_handle(resources);
 
-	Buffer *vb = index_buffer(resources, ib_res);
+	Buffer *vb = render_resources_index_buffer(resources, ib_res);
 	vb->stride = stride;
 
 	HRESULT hr = ID3D11Device_CreateBuffer(resources->d3d_device, &desc, buffer ? &sub_desc : 0, &vb->buffer);
@@ -325,22 +325,22 @@ Resource create_index_buffer(RenderResources *resources, void *buffer, unsigned 
 	return ib_res;
 }
 
-void destroy_index_buffer(RenderResources *resources, Resource resource)
+void render_resources_destroy_index_buffer(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_INDEX_BUFFER);
 
-	Buffer *ib = index_buffer(resources, resource);
+	Buffer *ib = render_resources_index_buffer(resources, resource);
 	ID3D11Buffer_Release(ib->buffer);
 
-	release_index_buffer_handle(resources, resource);
+	render_resources_release_index_buffer_handle(resources, resource);
 }
 
-RawBuffer *raw_buffer(RenderResources *resources, Resource resource)
+RawBuffer *render_resources_raw_buffer(RenderResources *resources, Resource resource)
 {
 	return &resources->raw_buffers[resource_handle(resource)];
 }
 
-Resource create_raw_buffer(RenderResources *resources, void *buffer, unsigned size)
+Resource render_resources_create_raw_buffer(RenderResources *resources, void *buffer, unsigned size)
 {
 	D3D11_BUFFER_DESC desc;
 	desc.ByteWidth = size;
@@ -355,9 +355,9 @@ Resource create_raw_buffer(RenderResources *resources, void *buffer, unsigned si
 	sub_desc.SysMemSlicePitch = 0;
 	sub_desc.pSysMem = buffer;
 
-	Resource rb_res = allocate_raw_buffer_handle(resources);
+	Resource rb_res = render_resources_allocate_raw_buffer_handle(resources);
 
-	RawBuffer *rb = raw_buffer(resources, rb_res);
+	RawBuffer *rb = render_resources_raw_buffer(resources, rb_res);
 	HRESULT hr = ID3D11Device_CreateBuffer(resources->d3d_device, &desc, buffer ? &sub_desc : 0, &rb->buffer);
 	assert(SUCCEEDED(hr));
 
@@ -376,27 +376,27 @@ Resource create_raw_buffer(RenderResources *resources, void *buffer, unsigned si
 	return rb_res;
 }
 
-void destroy_raw_buffer(RenderResources *resources, Resource resource)
+void render_resources_destroy_raw_buffer(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_RAW_BUFFER);
 
-	RawBuffer *rb = raw_buffer(resources, resource);
+	RawBuffer *rb = render_resources_raw_buffer(resources, resource);
 	ID3D11Buffer_Release(rb->buffer);
 	ID3D11ShaderResourceView_Release(rb->srv);
 
-	release_raw_buffer_handle(resources, resource);
+	render_resources_release_raw_buffer_handle(resources, resource);
 }
 
-VertexDeclaration *vertex_declaration(RenderResources *resources, Resource resource)
+VertexDeclaration *render_resources_vertex_declaration(RenderResources *resources, Resource resource)
 {
 	return &resources->vertex_declarations[resource_handle(resource)];
 }
 
-Resource create_vertex_declaration(RenderResources *resources, VertexElement *vertex_elements, unsigned n_vertex_elements)
+Resource render_resources_create_vertex_declaration(RenderResources *resources, VertexElement *vertex_elements, unsigned n_vertex_elements)
 {
-	Resource vd_res = allocate_vertex_declaration_handle(resources);
+	Resource vd_res = render_resources_allocate_vertex_declaration_handle(resources);
 
-	VertexDeclaration *vd = vertex_declaration(resources, vd_res);
+	VertexDeclaration *vd = render_resources_vertex_declaration(resources, vd_res);
 
 	sb_create(resources->allocator, vd->elements, n_vertex_elements);
 
@@ -427,27 +427,27 @@ Resource create_vertex_declaration(RenderResources *resources, VertexElement *ve
 	return vd_res;
 }
 
-void destroy_vertex_declaration(RenderResources *resources, Resource resource)
+void render_resources_destroy_vertex_declaration(RenderResources *resources, Resource resource)
 {
 	assert(resource_type(resource) == RESOURCE_VERTEX_DECLARATION);
 
-	VertexDeclaration *vd = vertex_declaration(resources, resource);
+	VertexDeclaration *vd = render_resources_vertex_declaration(resources, resource);
 	sb_free(vd->elements);
 
-	release_vertex_declaration_handle(resources, resource);
+	render_resources_release_vertex_declaration_handle(resources, resource);
 }
 
-VertexShader *vertex_shader(RenderResources *resources, Resource resource)
+VertexShader *render_resources_vertex_shader(RenderResources *resources, Resource resource)
 {
 	return &resources->vertex_shaders[resource_handle(resource)];
 }
 
-PixelShader *pixel_shader(RenderResources *resources, Resource resource)
+PixelShader *render_resources_pixel_shader(RenderResources *resources, Resource resource)
 {
 	return &resources->pixel_shaders[resource_handle(resource)];
 }
 
-Resource create_shader_program(RenderResources *resources, unsigned shader_program_type, const char *program, unsigned program_length)
+Resource render_resources_create_shader_program(RenderResources *resources, unsigned shader_program_type, const char *program, unsigned program_length)
 {
 	static const char *entry[] = { "vs_main", "ps_main" };
 	static const char *target[] = { "vs_5_0", "ps_5_0" };
@@ -461,8 +461,8 @@ Resource create_shader_program(RenderResources *resources, unsigned shader_progr
 	switch (shader_program_type) {
 	case SPT_VERTEX:
 	{
-		Resource shader = allocate_vertex_shader_handle(resources);
-		VertexShader *vs = vertex_shader(resources, shader);
+		Resource shader = render_resources_allocate_vertex_shader_handle(resources);
+		VertexShader *vs = render_resources_vertex_shader(resources, shader);
 		vs->bytecode = shader_program;
 		hr = ID3D11Device_CreateVertexShader(resources->d3d_device, ID3D10Blob_GetBufferPointer(shader_program), ID3D10Blob_GetBufferSize(shader_program), NULL, &vs->shader);
 		assert(SUCCEEDED(hr));
@@ -471,8 +471,8 @@ Resource create_shader_program(RenderResources *resources, unsigned shader_progr
 	break;
 	case SPT_PIXEL:
 	{
-		Resource shader = allocate_pixel_shader_handle(resources);
-		PixelShader *ps = pixel_shader(resources, shader);
+		Resource shader = render_resources_allocate_pixel_shader_handle(resources);
+		PixelShader *ps = render_resources_pixel_shader(resources, shader);
 		hr = ID3D11Device_CreatePixelShader(resources->d3d_device, ID3D10Blob_GetBufferPointer(shader_program), ID3D10Blob_GetBufferSize(shader_program), NULL, &ps->shader);
 		assert(SUCCEEDED(hr));
 		return shader;
@@ -488,21 +488,21 @@ Resource create_shader_program(RenderResources *resources, unsigned shader_progr
 	return resource_encode_handle_type(0, 0);
 }
 
-void destroy_shader_program(RenderResources *resources, Resource shader_program)
+void render_resources_destroy_shader_program(RenderResources *resources, Resource shader_program)
 {
 	switch (resource_type(shader_program)) {
 	case RESOURCE_VERTEX_SHADER:
 	{
-		VertexShader *vs = vertex_shader(resources, shader_program);
+		VertexShader *vs = render_resources_vertex_shader(resources, shader_program);
 		ID3D11VertexShader_Release(vs->shader);
-		release_vertex_shader_handle(resources, shader_program);
+		render_resources_release_vertex_shader_handle(resources, shader_program);
 	}
 	break;
 	case RESOURCE_PIXEL_SHADER:
 	{
-		PixelShader *ps = pixel_shader(resources, shader_program);
+		PixelShader *ps = render_resources_pixel_shader(resources, shader_program);
 		ID3D11PixelShader_Release(ps->shader);
-		release_pixel_shader_handle(resources, shader_program);
+		render_resources_release_pixel_shader_handle(resources, shader_program);
 	}
 	break;
 	default:
@@ -511,7 +511,7 @@ void destroy_shader_program(RenderResources *resources, Resource shader_program)
 	}
 }
 
-InputLayout *input_layout(RenderResources *resources, Resource vs_res, Resource vd_res)
+InputLayout *render_resources_input_layout(RenderResources *resources, Resource vs_res, Resource vd_res)
 {
 	UINT64 *hashes = resources->input_layout_hashes;
 	const unsigned n_layouts = sb_count(hashes);
@@ -528,8 +528,8 @@ InputLayout *input_layout(RenderResources *resources, Resource vs_res, Resource 
 	sb_push(hashes, hash);
 	InputLayout in_layout = { .input_layout = NULL };
 
-	VertexShader *vs = vertex_shader(resources, vs_res);
-	VertexDeclaration *vd = vertex_declaration(resources, vd_res);
+	VertexShader *vs = render_resources_vertex_shader(resources, vs_res);
+	VertexDeclaration *vd = render_resources_vertex_declaration(resources, vd_res);
 	const unsigned n_elements = sb_count(vd->elements);
 	ID3D11Device_CreateInputLayout(resources->d3d_device, vd->elements, n_elements, ID3D10Blob_GetBufferPointer(vs->bytecode), ID3D10Blob_GetBufferSize(vs->bytecode), &in_layout.input_layout);
 

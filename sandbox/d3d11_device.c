@@ -130,12 +130,12 @@ void d3d11_device_create(Allocator *allocator, HWND window, D3D11Device **d3d11_
 		return;
 	}
 
-	create_resources(allocator, device->device, &device->resources);
+	render_resources_create(allocator, device->device, &device->resources);
 }
 
 void d3d11_device_destroy(Allocator *allocator, D3D11Device *device)
 {
-	destroy_resources(allocator, device->resources);
+	render_resources_destroy(allocator, device->resources);
 
 	ID3D11BlendState_Release(device->blend_state);
 	ID3D11DepthStencilState_Release(device->depth_stencil_state);
@@ -200,29 +200,29 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 		const unsigned type = resource_type(resource);
 		switch (type) {
 		case RESOURCE_VERTEX_BUFFER:
-			vb = vertex_buffer(device->resources, resource);
+			vb = render_resources_vertex_buffer(device->resources, resource);
 			break;
 		case RESOURCE_INDEX_BUFFER:
-			ib = index_buffer(device->resources, resource);
+			ib = render_resources_index_buffer(device->resources, resource);
 			break;
 		case RESOURCE_VERTEX_DECLARATION:
-			vd = vertex_declaration(device->resources, resource);
+			vd = render_resources_vertex_declaration(device->resources, resource);
 			vd_res = resource;
 			break;
 		case RESOURCE_VERTEX_SHADER:
-			vs = vertex_shader(device->resources, resource);
+			vs = render_resources_vertex_shader(device->resources, resource);
 			vs_res = resource;
 			break;
 		case RESOURCE_PIXEL_SHADER:
-			ps = pixel_shader(device->resources, resource);
+			ps = render_resources_pixel_shader(device->resources, resource);
 			break;
 		case RESOURCE_RAW_BUFFER:
-			rb = raw_buffer(device->resources, resource);
+			rb = render_resources_raw_buffer(device->resources, resource);
 			break;
 		}
 	}
 
-	InputLayout *in_layout = input_layout(device->resources, vs_res, vd_res);
+	InputLayout *in_layout = render_resources_input_layout(device->resources, vs_res, vd_res);
 
 	ID3D11DeviceContext_IASetInputLayout(device->immediate_context, in_layout->input_layout);
 	ID3D11DeviceContext_OMSetRenderTargets(device->immediate_context, 1, &device->swap_chain_rtv, NULL);

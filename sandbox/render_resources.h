@@ -8,8 +8,8 @@
 typedef struct RenderResources RenderResources;
 typedef struct Allocator Allocator;
 
-void create_resources(Allocator *allocator, ID3D11Device *d3d_device, RenderResources **resources);
-void destroy_resources(Allocator *allocator, RenderResources *resources);
+void render_resources_create(Allocator *allocator, ID3D11Device *d3d_device, RenderResources **resources);
+void render_resources_destroy(Allocator *allocator, RenderResources *resources);
 
 typedef struct Resource
 {
@@ -72,17 +72,17 @@ typedef struct InputLayout
 	ID3D11InputLayout *input_layout;
 } InputLayout;
 
-Buffer *vertex_buffer(RenderResources *resources, Resource resource);
-Resource create_vertex_buffer(RenderResources *resources, void *buffer, unsigned vertices, unsigned stride);
-void destroy_vertex_buffer(RenderResources *resources, Resource resource);
+Buffer *render_resources_vertex_buffer(RenderResources *resources, Resource resource);
+Resource render_resources_create_vertex_buffer(RenderResources *resources, void *buffer, unsigned vertices, unsigned stride);
+void render_resources_destroy_vertex_buffer(RenderResources *resources, Resource resource);
 
-Buffer *index_buffer(RenderResources *resources, Resource resource);
-Resource create_index_buffer(RenderResources *resources, void *buffer, unsigned indices, unsigned stride);
-void destroy_index_buffer(RenderResources *resources, Resource resource);
+Buffer *render_resources_index_buffer(RenderResources *resources, Resource resource);
+Resource render_resources_create_index_buffer(RenderResources *resources, void *buffer, unsigned indices, unsigned stride);
+void render_resources_destroy_index_buffer(RenderResources *resources, Resource resource);
 
-RawBuffer *raw_buffer(RenderResources *resources, Resource resource);
-Resource create_raw_buffer(RenderResources *resources, void *buffer, unsigned size);
-void destroy_raw_buffer(RenderResources *resources, Resource resource);
+RawBuffer *render_resources_raw_buffer(RenderResources *resources, Resource resource);
+Resource render_resources_create_raw_buffer(RenderResources *resources, void *buffer, unsigned size);
+void render_resources_destroy_raw_buffer(RenderResources *resources, Resource resource);
 
 typedef struct VertexElement
 {
@@ -91,17 +91,17 @@ typedef struct VertexElement
 } VertexElement;
 enum VertexSemantic { VS_POSITION, VS_COLOR, VS_TEXCOORD };
 enum VertexType { VT_FLOAT3, VT_FLOAT4 };
-VertexDeclaration *vertex_declaration(RenderResources *resources, Resource resource);
-Resource create_vertex_declaration(RenderResources *resources, VertexElement *vertex_elements, unsigned n_vertex_elements);
-void destroy_vertex_declaration(RenderResources *resources, Resource resource);
+VertexDeclaration *render_resources_vertex_declaration(RenderResources *resources, Resource resource);
+Resource render_resources_create_vertex_declaration(RenderResources *resources, VertexElement *vertex_elements, unsigned n_vertex_elements);
+void render_resources_destroy_vertex_declaration(RenderResources *resources, Resource resource);
 
 enum ShaderProgramType { SPT_VERTEX = 0, SPT_PIXEL };
-VertexShader *vertex_shader(RenderResources *resources, Resource resource);
-PixelShader *pixel_shader(RenderResources *resources, Resource resource);
-Resource create_shader_program(RenderResources *resources, unsigned shader_program_type, const char *program, unsigned program_length);
-void destroy_shader_program(RenderResources *resources, Resource shader_program);
+VertexShader *render_resources_vertex_shader(RenderResources *resources, Resource resource);
+PixelShader *render_resources_pixel_shader(RenderResources *resources, Resource resource);
+Resource render_resources_create_shader_program(RenderResources *resources, unsigned shader_program_type, const char *program, unsigned program_length);
+void render_resources_destroy_shader_program(RenderResources *resources, Resource shader_program);
 
-InputLayout *input_layout(RenderResources *resources, Resource vertex_stream_resource, Resource vertex_declaration_resource);
+InputLayout *render_resources_input_layout(RenderResources *resources, Resource vertex_stream_resource, Resource vertex_declaration_resource);
 typedef struct RenderPackage
 {
 	Allocator *allocator;
