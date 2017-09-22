@@ -194,7 +194,9 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	VertexDeclaration *vd = NULL;
 	VertexShader *vs = NULL;
 	PixelShader *ps = NULL;
-	RawBuffer *rb = NULL;
+
+	unsigned n_rbs = 0;
+	ID3D11ShaderResourceView *rb_srvs[4] = { 0, 0, 0, 0};
 	const unsigned n_resources = render_package->n_resources;
 	for (unsigned i = 0; i < n_resources; ++i) {
 		Resource resource = render_package->resources[i];
@@ -218,7 +220,7 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 			ps = render_resources_pixel_shader(device->resources, resource);
 			break;
 		case RESOURCE_RAW_BUFFER:
-			rb = render_resources_raw_buffer(device->resources, resource);
+			rb_srvs[n_rbs++] = render_resources_raw_buffer(device->resources, resource)->srv;
 			break;
 		}
 	}
@@ -243,15 +245,15 @@ void d3d11_device_render(D3D11Device *device, RenderPackage *render_package)
 	ID3D11DeviceContext_VSSetShader(device->immediate_context, vs->shader, NULL, 0);
 	ID3D11DeviceContext_PSSetShader(device->immediate_context, ps->shader, NULL, 0);
 
-	if (rb)
-		ID3D11DeviceContext_VSSetShaderResources(device->immediate_context, 0, 1, &rb->srv);
+	if (n_rbs)
+		ID3D11DeviceContext_VSSetShaderResources(device->immediate_context, 0, n_rbs, rb_srvs);
 	else
 		ID3D11DeviceContext_VSSetShaderResources(device->immediate_context, 0, 0, NULL);
 
 	UINT stride = vb->stride;
 	UINT offset = 0;
 	ID3D11DeviceContext_IASetVertexBuffers(device->immediate_context, 0, 1, &vb->buffer, &stride, &offset);
-	DXGI_FORMAT ib_format = ib ? (ib->stride == 16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT) : DXGI_FORMAT_R16_UINT;
+	DXGI_FORMAT ib_format = ib ? (ib->stride == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT) : DXGI_FORMAT_R16_UINT;
 	ID3D11Buffer *ib_buffer = ib ? ib->buffer : NULL;
 	ID3D11DeviceContext_IASetIndexBuffer(device->immediate_context, ib_buffer, ib_format, 0);
 

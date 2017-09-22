@@ -10,6 +10,7 @@
 #include "allocator.h"
 #include "stretchy_buffer.h"
 #include "render_resources.h"
+#include "stb_easy_font.h"
 
 #define MAX_LOADSTRING 100
 
@@ -79,16 +80,97 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	MSG msg;
 
-	const unsigned stride = 6 * sizeof(float);
+	RenderResources *resources = d3d11_device_render_resources(program.device);
+
+	static char buffer[99999]; // ~500 chars
+	//int num_quads;
+
+	//unsigned char color[4] = { 128, 128, 128, 255 };
+	//num_quads = stb_easy_font_print(0, 0, "I'm pretty amazed by this!", color, buffer, sizeof(buffer));
+	const unsigned n_font_verts = 9999;
+	UINT16 font_index_buffer[6 * 9999];
+	for (unsigned i = 0, q = 0; i < 6 * 9999; i += 6, ++q) {
+		const unsigned index = q * 6;
+		font_index_buffer[index + 0] = q * 4 + 0;
+		font_index_buffer[index + 1] = q * 4 + 1;
+		font_index_buffer[index + 2] = q * 4 + 2;
+
+		font_index_buffer[index + 3] = q * 4 + 0;
+		font_index_buffer[index + 4] = q * 4 + 2;
+		font_index_buffer[index + 5] = q * 4 + 3;
+	}
+	const unsigned n_font_indices = n_font_verts * 6;
+	//Resource font_vb_resource = render_resources_create_vertex_buffer(resources, buffer, n_font_verts * 4, 4 * sizeof(float));
+	Resource font_vb_resource = render_resources_create_vertex_buffer(resources, NULL, n_font_verts, 4 * sizeof(float));
+	Resource font_ib_resource = render_resources_create_index_buffer(resources, font_index_buffer, n_font_indices, sizeof(font_index_buffer[0]));
+
+	const char font_shader_program[] =
+		"\
+		struct VS_INPUT \
+		{ \
+			float3 position : POSITION;\
+			float4 color : COLOR;\
+		};\
+		\
+		struct VS_OUTPUT \
+		{ \
+			float4 position : SV_POSITION;\
+			float4 color : COLOR0;\
+		};\
+		\
+		VS_OUTPUT vs_main(VS_INPUT input) \
+		{ \
+			VS_OUTPUT output; \
+			float2 offset = float2(640, 360);\
+			output.position = (float4(input.position - float3(offset, 0), 1.0f) / float4(offset, 1.0f, 1.0f));\
+			output.position.y *= -1.0f;\
+			output.color = input.color;\
+			return output; \
+		}; \
+		\
+		struct PS_OUTPUT \
+		{ \
+			float4 color : SV_TARGET0; \
+		}; \
+		\
+		PS_OUTPUT ps_main(VS_OUTPUT input) \
+		{ \
+			PS_OUTPUT output; \
+			output.color = input.color;\
+			return output; \
+		}; \
+		";
+	Resource font_vs_resource = render_resources_create_shader_program(resources, SPT_VERTEX, font_shader_program, sizeof(font_shader_program));
+	Resource font_ps_resource = render_resources_create_shader_program(resources, SPT_PIXEL, font_shader_program, sizeof(font_shader_program));
+
+	VertexElement font_elements[] = {
+		{ .semantic = VS_POSITION,.type = VT_FLOAT3 },
+		{ .semantic = VS_COLOR,.type = VT_UBYTE4 },
+	};
+	Resource font_vd_resource = render_resources_create_vertex_declaration(resources, font_elements, sizeof(font_elements) / sizeof(font_elements[0]));
+
+	Resource font_render_resources[] = {
+		font_vb_resource,
+		font_ib_resource,
+		font_vd_resource,
+		font_vs_resource,
+		font_ps_resource,
+	};
+	const unsigned n_font_resources = sizeof(font_render_resources) / sizeof(font_render_resources[0]);
+
+	RenderPackage *font_render_package = create_render_package(program.allocator, font_render_resources, n_font_resources, 0, 0);
+	#define N_INSTANCES 1000U
+	#define N_TYPES 10U
+
+	const unsigned stride = 3 * sizeof(float);
 	float vertex_buffer[] = {
-		0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.0f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
-		0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
+		0.0f, 0.05f, 0.0f,// 1.0f, 0.0f, 0.0f,
+		0.0f, -0.05f, 0.0f,// 0.0f, 1.0f, 0.0f,
+		0.05f, 0.05f, 0.0f,// 0.0f, 0.0f, 1.0f,
+		0.05f, -0.05f, 0.0f,// 1.0f, 1.0f, 0.0f,
 	};
 	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
-	RenderResources *resources = d3d11_device_render_resources(program.device);
 	Resource vb_resource = render_resources_create_vertex_buffer(resources, vertex_buffer, n_vertices, stride);
 
 	UINT16 index_buffer[] = {
@@ -96,33 +178,66 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		2, 1, 3,
 	};
 	const unsigned n_indices = sizeof(index_buffer) / sizeof(index_buffer[0]);
-	const unsigned index_stride = 16;
+	const unsigned index_stride = sizeof(index_buffer[0]);
 	Resource ib_resource = render_resources_create_index_buffer(resources, index_buffer, n_indices, index_stride);
 
-	float raw_buffer[] = {
-		0.5f, -0.1f, 1.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f,
-	};
-	const unsigned raw_buffer_size = sizeof(raw_buffer);
-	Resource rb_resource = render_resources_create_raw_buffer(resources, raw_buffer, raw_buffer_size);
+	unsigned types_raw_buffer[N_INSTANCES];
+	for (unsigned i = 0; i < N_INSTANCES; ++i) {
+		types_raw_buffer[i] = i % N_TYPES;
+	}
+	Resource types_rb_resource = render_resources_create_raw_buffer(resources, types_raw_buffer, sizeof(types_raw_buffer));
 
-	VertexElement elements[2] = {
+	float positions_raw_buffer[N_INSTANCES * 2];
+	for (unsigned i = 0; i < N_INSTANCES; ++i) {
+		unsigned index = 2 * i;
+		int value;
+		do {
+			value = rand();
+		} while (value == 0);
+		positions_raw_buffer[index + 0] = 2.0f * (value / (float)RAND_MAX) - 1.0f;
+		do {
+			value = rand();
+		} while (value == 0);
+		positions_raw_buffer[index + 1] = 2.0f * value / (float)RAND_MAX - 1.0f;
+	}
+	positions_raw_buffer[0] = -0.5f;
+	positions_raw_buffer[1] = 0.5f;
+	Resource positions_rb_resource = render_resources_create_raw_buffer(resources, positions_raw_buffer, sizeof(positions_raw_buffer));
+
+	float directions[N_INSTANCES];
+	for (unsigned i = 0; i < N_INSTANCES; ++i) {
+		directions[i] = 0.1f;
+	}
+
+	float colors_raw_buffer[N_TYPES * 4] = {
+		1.0f, 0.0f, 0.0f, 1.0f,
+		0.0f, 1.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 0.0f, 1.0f,
+		1.0f, 0.0f, 1.0f, 1.0f,
+		0.0f, 1.0f, 1.0f, 1.0f,
+		1.0f, 0.2f, 0.0f, 1.0f,
+		0.0f, 1.0f, 0.2f, 1.0f,
+		0.2f, 0.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 0.2f, 1.0f,
+	};
+	Resource colors_rb_resource = render_resources_create_raw_buffer(resources, colors_raw_buffer, sizeof(colors_raw_buffer));
+
+	VertexElement elements[] = {
 		{.semantic = VS_POSITION,.type = VT_FLOAT3},
-		{.semantic = VS_TEXCOORD,.type = VT_FLOAT3},
 	};
+	const unsigned n_elements = sizeof(elements) / sizeof(elements[0]);
 
-	Resource vd_resource = render_resources_create_vertex_declaration(resources, elements, 2);
+	Resource vd_resource = render_resources_create_vertex_declaration(resources, elements, n_elements);
 
 	const char vertex_shader_program[] =
 		" \
-		ByteAddressBuffer buffer : t0; \
+		ByteAddressBuffer positions_buffer : t0; \
+		ByteAddressBuffer types_buffer : t1; \
+		ByteAddressBuffer colors_buffer : t2; \
 		struct VS_INPUT \
 		{ \
 			float4 position : POSITION;\
-			float3 color : TEXCOORD0;\
 			uint vertex_id : SV_VertexID;\
 			uint instance_id : SV_InstanceID;\
 		};\
@@ -135,13 +250,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		\
 		VS_OUTPUT vs_main(VS_INPUT input) \
 		{ \
-			uint pos_byte_address = input.instance_id * 4 * 6;\
-			uint col_byte_address = pos_byte_address + 4 * 2; \
-			float2 position = asfloat(buffer.Load2(pos_byte_address)); \
-			float3 color = asfloat(buffer.Load3(col_byte_address)); \
+			uint pos_byte_address = input.instance_id * 4 * 2;\
+			uint type_byte_address = input.instance_id * 4 * 1; \
+			\
+			float2 position = asfloat(positions_buffer.Load2(pos_byte_address)); \
+			float type = types_buffer.Load(type_byte_address); \
+			\
+			uint col_byte_address = type * 4 * 4; \
+			float4 color = asfloat(colors_buffer.Load4(col_byte_address)); \
 			VS_OUTPUT output; \
 			output.position = input.position + float4(position, 0.0f, 0.0f); \
-			output.color = color;\
+			output.color = color.rgb;\
 			return output; \
 		}; \
 		\
@@ -167,17 +286,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		vd_resource,
 		vs_resource,
 		ps_resource,
-		rb_resource,
+		positions_rb_resource,
+		types_rb_resource,
+		colors_rb_resource,
 	};
 	const unsigned n_resources = sizeof(render_resources) / sizeof(render_resources[0]);
 
 	RenderPackage *render_package = create_render_package(program.allocator, render_resources, n_resources, n_vertices, n_indices);
-	render_package->n_instances = 2;
+	render_package->n_instances = N_INSTANCES;
 
 	Timer timer;
 	float dt = 0.0f;
-	float direction = 0.1f;
 	delta_time(&timer);
+	float smoothed_dt = 0.0f;
 	while (not_quit) {
 		dt = delta_time(&timer);
 
@@ -186,20 +307,40 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 
-		if (raw_buffer[0] < -1.0f || raw_buffer[0] > 1.0f) {
-			direction *= -1.0f;
+		for (unsigned i = 0; i < N_INSTANCES; ++i) {
+			const unsigned index = 2 * i;
+			if (positions_raw_buffer[index] < -1.0f) {
+				positions_raw_buffer[index] = -1.0f;
+				directions[i] *= -1.0f;
+			} else if (positions_raw_buffer[index] > 1.0f) {
+				positions_raw_buffer[index] = 1.0f;
+				directions[i] *= -1.0f;
+			}
+
+			positions_raw_buffer[index] += directions[i] * dt;
 		}
 
-		raw_buffer[0] += direction * dt;
+		render_resource_raw_buffer_update(resources, positions_rb_resource, positions_raw_buffer, sizeof(positions_raw_buffer));
 
-		render_resource_raw_buffer_update(resources, rb_resource, raw_buffer, sizeof(raw_buffer));
+		int num_quads;
+		unsigned char color[4] = { 255, 255, 255, 255 };
+		unsigned char text_buffer[1024];
+		smoothed_dt = smoothed_dt * 0.9f + dt * 0.1f;
+		sprintf_s(text_buffer, 1024, "Update time: %.2f", smoothed_dt * 1000.0f);
+		num_quads = stb_easy_font_print(0, 0, text_buffer, color, buffer, sizeof(buffer));
+		render_resource_vertex_buffer_update(resources, font_vb_resource, buffer, num_quads * 4 * sizeof(float) * 4);
+		font_render_package->n_vertices = num_quads * 4;
+		font_render_package->n_indices = num_quads * 6;
 
 		d3d11_device_clear(program.device);
 		d3d11_device_render(program.device, render_package);
+		d3d11_device_render(program.device, font_render_package);
 		d3d11_device_present(program.device);		
 	}
 
-	render_resources_destroy_raw_buffer(resources, rb_resource);
+	render_resources_destroy_raw_buffer(resources, positions_rb_resource);
+	render_resources_destroy_raw_buffer(resources, types_rb_resource);
+	render_resources_destroy_raw_buffer(resources, colors_rb_resource);
 	render_resources_destroy_shader_program(resources, vs_resource);
 	render_resources_destroy_shader_program(resources, ps_resource);
 	render_resources_destroy_vertex_declaration(resources, vd_resource);
@@ -207,6 +348,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	render_resources_destroy_vertex_buffer(resources, vb_resource);
 
 	destroy_render_package(render_package);
+
+	render_resources_destroy_vertex_buffer(resources, font_vb_resource);
+	render_resources_destroy_index_buffer(resources, font_ib_resource);
+	render_resources_destroy_vertex_declaration(resources, font_vd_resource);
+	render_resources_destroy_shader_program(resources, font_vs_resource);
+	render_resources_destroy_shader_program(resources, font_ps_resource);
+	destroy_render_package(font_render_package);
 
 	d3d11_device_destroy(program.allocator, program.device);
 	destroy_allocator(program.allocator);

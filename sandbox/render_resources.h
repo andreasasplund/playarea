@@ -48,6 +48,7 @@ inline int resource_is_valid(Resource resource)
 typedef struct Buffer
 {
 	ID3D11Buffer *buffer;
+	ID3D11Resource *resource;
 	unsigned stride;
 } Buffer;
 
@@ -82,6 +83,7 @@ typedef struct InputLayout
 Buffer *render_resources_vertex_buffer(RenderResources *resources, Resource resource);
 Resource render_resources_create_vertex_buffer(RenderResources *resources, void *buffer, unsigned vertices, unsigned stride);
 void render_resources_destroy_vertex_buffer(RenderResources *resources, Resource resource);
+void render_resource_vertex_buffer_update(RenderResources *resources, Resource resource, void *buffer, unsigned size);
 
 Buffer *render_resources_index_buffer(RenderResources *resources, Resource resource);
 Resource render_resources_create_index_buffer(RenderResources *resources, void *buffer, unsigned indices, unsigned stride);
@@ -98,7 +100,7 @@ typedef struct VertexElement
 	unsigned type;
 } VertexElement;
 enum VertexSemantic { VS_POSITION, VS_COLOR, VS_TEXCOORD };
-enum VertexType { VT_FLOAT3, VT_FLOAT4 };
+enum VertexType { VT_FLOAT3, VT_FLOAT4, VT_UBYTE4 };
 VertexDeclaration *render_resources_vertex_declaration(RenderResources *resources, Resource resource);
 Resource render_resources_create_vertex_declaration(RenderResources *resources, VertexElement *vertex_elements, unsigned n_vertex_elements);
 void render_resources_destroy_vertex_declaration(RenderResources *resources, Resource resource);

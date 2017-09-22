@@ -286,6 +286,8 @@ Resource render_resources_create_vertex_buffer(RenderResources *resources, void 
 	HRESULT hr = ID3D11Device_CreateBuffer(resources->d3d_device, &desc, buffer ? &sub_desc : 0, &vb->buffer);
 	assert(SUCCEEDED(hr));
 
+	ID3D11Buffer_QueryInterface(vb->buffer, &IID_ID3D11Resource, &vb->resource);
+
 	return vb_res;
 }
 
@@ -295,8 +297,27 @@ void render_resources_destroy_vertex_buffer(RenderResources *resources, Resource
 
 	Buffer *vb = render_resources_vertex_buffer(resources, resource);
 	ID3D11Buffer_Release(vb->buffer);
+	ID3D11Resource_Release(vb->resource);
 
 	render_resources_release_vertex_buffer_handle(resources, resource);
+}
+
+void render_resource_vertex_buffer_update(RenderResources *resources, Resource resource, void *buffer, unsigned size)
+{
+	assert(resource_type(resource) == RESOURCE_VERTEX_BUFFER);
+	Buffer *vb = render_resources_vertex_buffer(resources, resource);
+
+	ID3D11DeviceContext *immediate_context = NULL;
+	ID3D11Device_GetImmediateContext(resources->d3d_device, &immediate_context);
+	D3D11_BOX dest_box;
+	dest_box.left = 0;
+	dest_box.right = size;
+	dest_box.top = 0;
+	dest_box.bottom = 1;
+	dest_box.front = 0;
+	dest_box.back = 1;
+	ID3D11DeviceContext_UpdateSubresource(immediate_context, vb->resource, 0, &dest_box, buffer, size, 0);
+	ID3D11DeviceContext_Release(immediate_context);
 }
 
 Buffer *render_resources_index_buffer(RenderResources *resources, Resource resource)
@@ -423,10 +444,11 @@ Resource render_resources_create_vertex_declaration(RenderResources *resources, 
 	sb_create(resources->allocator, vd->elements, n_vertex_elements);
 
 	static const char* semantics[] = { "POSITION", "COLOR", "TEXCOORD" };
-	static const DXGI_FORMAT formats[] = { DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT };
+	static const DXGI_FORMAT formats[] = { DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM };
 	static unsigned type_size[] = {
 		3 * sizeof(float),
 		4 * sizeof(float),
+		4 * sizeof(char),
 	};
 
 	unsigned offset = 0;
@@ -569,6 +591,7 @@ RenderPackage *create_render_package(Allocator *allocator, const Resource *resou
 	memcpy(package->resources, resources, sizeof(Resource) * n_resources);
 	package->n_vertices = n_vertices;
 	package->n_indices = n_indices;
+	package->n_instances = 1;
 
 	return package;
 }
