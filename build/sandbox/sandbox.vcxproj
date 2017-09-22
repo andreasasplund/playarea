@@ -28,6 +28,7 @@
     <ClInclude Include="..\..\sandbox\allocator.h" />
     <ClInclude Include="..\..\sandbox\d3d11_device.h" />
     <ClInclude Include="..\..\sandbox\render_resources.h" />
+    <ClInclude Include="..\..\sandbox\stb_easy_font.h" />
     <ClInclude Include="..\..\sandbox\stretchy_buffer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
