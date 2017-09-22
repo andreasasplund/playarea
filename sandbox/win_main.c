@@ -82,12 +82,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	RenderResources *resources = d3d11_device_render_resources(program.device);
 
-	static char buffer[99999]; // ~500 chars
-	//int num_quads;
-
-	//unsigned char color[4] = { 128, 128, 128, 255 };
-	//num_quads = stb_easy_font_print(0, 0, "I'm pretty amazed by this!", color, buffer, sizeof(buffer));
-	const unsigned n_font_verts = 9999;
+	static const unsigned n_font_verts = 9999;
+	static char buffer[1024 * 1024]; // ~500 chars
 	UINT16 font_index_buffer[6 * 9999];
 	for (unsigned i = 0, q = 0; i < 6 * 9999; i += 6, ++q) {
 		const unsigned index = q * 6;
@@ -100,7 +96,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		font_index_buffer[index + 5] = q * 4 + 3;
 	}
 	const unsigned n_font_indices = n_font_verts * 6;
-	//Resource font_vb_resource = render_resources_create_vertex_buffer(resources, buffer, n_font_verts * 4, 4 * sizeof(float));
 	Resource font_vb_resource = render_resources_create_vertex_buffer(resources, NULL, n_font_verts, 4 * sizeof(float));
 	Resource font_ib_resource = render_resources_create_index_buffer(resources, font_index_buffer, n_font_indices, sizeof(font_index_buffer[0]));
 
@@ -159,15 +154,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	const unsigned n_font_resources = sizeof(font_render_resources) / sizeof(font_render_resources[0]);
 
 	RenderPackage *font_render_package = create_render_package(program.allocator, font_render_resources, n_font_resources, 0, 0);
-	#define N_INSTANCES 1000U
-	#define N_TYPES 10U
+	enum { n_instances = 10000 };
+	enum { n_types = 10 };
 
 	const unsigned stride = 3 * sizeof(float);
 	float vertex_buffer[] = {
-		0.0f, 0.05f, 0.0f,// 1.0f, 0.0f, 0.0f,
-		0.0f, -0.05f, 0.0f,// 0.0f, 1.0f, 0.0f,
-		0.05f, 0.05f, 0.0f,// 0.0f, 0.0f, 1.0f,
-		0.05f, -0.05f, 0.0f,// 1.0f, 1.0f, 0.0f,
+		0.0f, 0.01f, 0.0f,
+		0.0f, -0.01f, 0.0f,
+		0.01f, 0.01f, 0.0f,
+		0.01f, -0.01f, 0.0f,
 	};
 	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
@@ -181,14 +176,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	const unsigned index_stride = sizeof(index_buffer[0]);
 	Resource ib_resource = render_resources_create_index_buffer(resources, index_buffer, n_indices, index_stride);
 
-	unsigned types_raw_buffer[N_INSTANCES];
-	for (unsigned i = 0; i < N_INSTANCES; ++i) {
-		types_raw_buffer[i] = i % N_TYPES;
+	unsigned types_raw_buffer[n_instances];
+	for (unsigned i = 0; i < n_instances; ++i) {
+		types_raw_buffer[i] = i % n_types;
 	}
 	Resource types_rb_resource = render_resources_create_raw_buffer(resources, types_raw_buffer, sizeof(types_raw_buffer));
 
-	float positions_raw_buffer[N_INSTANCES * 2];
-	for (unsigned i = 0; i < N_INSTANCES; ++i) {
+	float positions_raw_buffer[n_instances * 2];
+	for (unsigned i = 0; i < n_instances; ++i) {
 		unsigned index = 2 * i;
 		int value;
 		do {
@@ -204,12 +199,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	positions_raw_buffer[1] = 0.5f;
 	Resource positions_rb_resource = render_resources_create_raw_buffer(resources, positions_raw_buffer, sizeof(positions_raw_buffer));
 
-	float directions[N_INSTANCES];
-	for (unsigned i = 0; i < N_INSTANCES; ++i) {
+	float directions[n_instances];
+	for (unsigned i = 0; i < n_instances; ++i) {
 		directions[i] = 0.1f;
 	}
 
-	float colors_raw_buffer[N_TYPES * 4] = {
+	float colors_raw_buffer[n_types * 4] = {
 		1.0f, 0.0f, 0.0f, 1.0f,
 		0.0f, 1.0f, 0.0f, 1.0f,
 		0.0f, 0.0f, 1.0f, 1.0f,
@@ -293,12 +288,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	const unsigned n_resources = sizeof(render_resources) / sizeof(render_resources[0]);
 
 	RenderPackage *render_package = create_render_package(program.allocator, render_resources, n_resources, n_vertices, n_indices);
-	render_package->n_instances = N_INSTANCES;
+	render_package->n_instances = n_instances;
 
 	Timer timer;
 	float dt = 0.0f;
 	delta_time(&timer);
 	float smoothed_dt = 0.0f;
+	float smoothed_update_pos_time = 0.0f;
 	while (not_quit) {
 		dt = delta_time(&timer);
 
@@ -307,7 +303,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 
-		for (unsigned i = 0; i < N_INSTANCES; ++i) {
+		Timer update_pos_timer;
+		delta_time(&update_pos_timer);
+		for (unsigned i = 0; i < n_instances; ++i) {
 			const unsigned index = 2 * i;
 			if (positions_raw_buffer[index] < -1.0f) {
 				positions_raw_buffer[index] = -1.0f;
@@ -317,8 +315,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				directions[i] *= -1.0f;
 			}
 
-			positions_raw_buffer[index] += directions[i] * dt;
+			positions_raw_buffer[index] += directions[i] * smoothed_dt;
 		}
+		float update_pos_time = delta_time(&update_pos_timer);
+		smoothed_update_pos_time = smoothed_update_pos_time * 0.9f + update_pos_time * 0.1f;
 
 		render_resource_raw_buffer_update(resources, positions_rb_resource, positions_raw_buffer, sizeof(positions_raw_buffer));
 
@@ -326,7 +326,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		unsigned char color[4] = { 255, 255, 255, 255 };
 		unsigned char text_buffer[1024];
 		smoothed_dt = smoothed_dt * 0.9f + dt * 0.1f;
-		sprintf_s(text_buffer, 1024, "Update time: %.2f", smoothed_dt * 1000.0f);
+		sprintf_s(text_buffer, 1024, "Instance count: %u\nUpdate loop time: %.2f\nUpdate pos time: %.10f", n_instances, smoothed_dt * 1000.0f, smoothed_update_pos_time* 1000.0f);
 		num_quads = stb_easy_font_print(0, 0, text_buffer, color, buffer, sizeof(buffer));
 		render_resource_vertex_buffer_update(resources, font_vb_resource, buffer, num_quads * 4 * sizeof(float) * 4);
 		font_render_package->n_vertices = num_quads * 4;
