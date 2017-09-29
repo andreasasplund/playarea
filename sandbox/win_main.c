@@ -54,6 +54,40 @@ float delta_time(Timer *timer)
 
 int not_quit = 1;
 
+typedef struct UpdatePosition
+{
+	float *positions;
+	float *directions;
+	float dt;
+	float unit_scale;
+	unsigned start_entry;
+	unsigned count;
+} UpdatePosition;
+void update_position_job(void *callback_data)
+{
+	UpdatePosition *update_position = callback_data;
+	float *positions = update_position->positions;
+	float *directions = update_position->directions;
+	const float dt = update_position->dt;
+	const float unit_scale = update_position->unit_scale;
+	const unsigned count = update_position->count;
+	const unsigned start_entry = update_position->start_entry;
+
+	for (unsigned i = 0; i < count; ++i) {
+		const unsigned index = 2 * (i + start_entry);
+		if (positions[index] < -unit_scale) {
+			positions[index] = -unit_scale;
+			directions[i] *= -1.0f;
+		}
+		else if (positions[index] > unit_scale) {
+			positions[index] = unit_scale;
+			directions[i] *= -1.0f;
+		}
+
+		positions[index] += directions[i] * dt;
+	}
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					 _In_opt_ HINSTANCE hPrevInstance,
 					 _In_ LPWSTR    lpCmdLine,
@@ -82,6 +116,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	MSG msg;
 
+	program.fibers_system = fibers_system_create(program.allocator, 32);
 	RenderResources *resources = d3d11_device_render_resources(program.device);
 
 	static const unsigned n_font_verts = 9999;
@@ -310,7 +345,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		Timer update_pos_timer;
 		delta_time(&update_pos_timer);
+		UpdatePosition job_data[n_instances];// = { .positions = positions_raw_buffer,.directions = directions,.dt = smoothed_dt,.unit_scale = unit_scale,.start_entry = 0,.count = 1 };
+		FibersSystemJobDecl job_decls[n_instances];
 		for (unsigned i = 0; i < n_instances; ++i) {
+			UpdatePosition data = { .positions = positions_raw_buffer,.directions = directions,.dt = smoothed_dt,.unit_scale = unit_scale,.start_entry = i,.count = 1 };
+			job_data[i] = data;
+			job_decls[i].job_entry = update_position_job;
+			job_decls[i].callback_data = &job_data[i];
+		}
+		//FibersSystemJobDecl job_decl = { .job_entry = update_position_job, .callback_data = &job_data };
+		FibersSystemCounter *job_counter = NULL;
+		fibers_system_run_jobs(program.fibers_system, job_decls, n_instances, &job_counter);
+		fibers_system_wait_for_counter(program.fibers_system, job_counter, 0);
+		
+
+		/*for (unsigned i = 0; i < n_instances; ++i) {
 			const unsigned index = 2 * i;
 			if (positions_raw_buffer[index] < -unit_scale) {
 				positions_raw_buffer[index] = -unit_scale;
@@ -321,7 +370,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 
 			positions_raw_buffer[index] += directions[i] * smoothed_dt;
-		}
+		}*/
 		float update_pos_time = delta_time(&update_pos_timer);
 		smoothed_update_pos_time = smoothed_update_pos_time * 0.9f + update_pos_time * 0.1f;
 
@@ -362,6 +411,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	destroy_render_package(font_render_package);
 
 	d3d11_device_destroy(program.allocator, program.device);
+	fibers_system_destroy(program.allocator, program.fibers_system);
 	destroy_allocator(program.allocator);
 
 	return (int) msg.wParam;

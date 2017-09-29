@@ -9,6 +9,7 @@
 
 #define sb_push(a,v)		(__sbmaybegrow(a,1), (a)[__sbn(a)++] = (v))
 #define sb_count(a)			((a) ? (unsigned)__sbn(a) : 0)
+#define sb_capacity(a)		((unsigned)__sbm(a))
 #define sb_add(a,n)			(__sbmaybegrow(a,n), __sbn(a)+=(n), &(a)[__sbn(a)-(n)])
 #define sb_last(a)			((a)[__sbn(a)-1])
 #define sb_pop(a)			( (__sbn(a)) ? __sbn(a)-- : 0)
