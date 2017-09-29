@@ -11,6 +11,7 @@
 #include "stretchy_buffer.h"
 #include "render_resources.h"
 #include "stb_easy_font.h"
+#include "fibers_system.h"
 
 #define MAX_LOADSTRING 100
 
@@ -29,6 +30,7 @@ struct Program
 {
 	D3D11Device *device;
 	Allocator *allocator;
+	FibersSystem *fibers_system;
 };
 
 typedef struct Timer
@@ -57,7 +59,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					 _In_ LPWSTR    lpCmdLine,
 					 _In_ int       nCmdShow)
 {
-	struct Program program = { .device = 0, .allocator = 0};
+	struct Program program = { .device = NULL, .allocator = NULL, .fibers_system = NULL };
 	char initial_allocator_buffer[256U];
 	program.allocator = create_allocator(initial_allocator_buffer, sizeof(initial_allocator_buffer));
 	UNREFERENCED_PARAMETER(hPrevInstance);
@@ -154,15 +156,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	const unsigned n_font_resources = sizeof(font_render_resources) / sizeof(font_render_resources[0]);
 
 	RenderPackage *font_render_package = create_render_package(program.allocator, font_render_resources, n_font_resources, 0, 0);
-	enum { n_instances = 10000 };
+	enum { n_instances = 10 };
 	enum { n_types = 10 };
 
 	const unsigned stride = 3 * sizeof(float);
+	const float square_size = 100.0f;
 	float vertex_buffer[] = {
-		0.0f, 0.01f, 0.0f,
-		0.0f, -0.01f, 0.0f,
-		0.01f, 0.01f, 0.0f,
-		0.01f, -0.01f, 0.0f,
+		0.0f, square_size, 0.0f,
+		0.0f, -square_size, 0.0f,
+		square_size, square_size, 0.0f,
+		square_size, -square_size, 0.0f,
 	};
 	const unsigned n_vertices = sizeof(vertex_buffer) / stride;
 
@@ -183,17 +186,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	Resource types_rb_resource = render_resources_create_raw_buffer(resources, types_raw_buffer, sizeof(types_raw_buffer));
 
 	float positions_raw_buffer[n_instances * 2];
+	const float unit_scale = 1000.0f;
 	for (unsigned i = 0; i < n_instances; ++i) {
 		unsigned index = 2 * i;
 		int value;
 		do {
 			value = rand();
 		} while (value == 0);
-		positions_raw_buffer[index + 0] = 2.0f * (value / (float)RAND_MAX) - 1.0f;
+		positions_raw_buffer[index + 0] = (2.0f * (value / (float)RAND_MAX) - 1.0f) * unit_scale;
 		do {
 			value = rand();
 		} while (value == 0);
-		positions_raw_buffer[index + 1] = 2.0f * value / (float)RAND_MAX - 1.0f;
+		positions_raw_buffer[index + 1] = (2.0f * value / (float)RAND_MAX - 1.0f) * unit_scale;
 	}
 	positions_raw_buffer[0] = -0.5f;
 	positions_raw_buffer[1] = 0.5f;
@@ -201,7 +205,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	float directions[n_instances];
 	for (unsigned i = 0; i < n_instances; ++i) {
-		directions[i] = 0.1f;
+		directions[i] = 25.0f;
 	}
 
 	float colors_raw_buffer[n_types * 4] = {
@@ -255,6 +259,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			float4 color = asfloat(colors_buffer.Load4(col_byte_address)); \
 			VS_OUTPUT output; \
 			output.position = input.position + float4(position, 0.0f, 0.0f); \
+			output.position.xy =  output.position.xy / 1000.0f;\
 			output.color = color.rgb;\
 			return output; \
 		}; \
@@ -307,11 +312,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		delta_time(&update_pos_timer);
 		for (unsigned i = 0; i < n_instances; ++i) {
 			const unsigned index = 2 * i;
-			if (positions_raw_buffer[index] < -1.0f) {
-				positions_raw_buffer[index] = -1.0f;
+			if (positions_raw_buffer[index] < -unit_scale) {
+				positions_raw_buffer[index] = -unit_scale;
 				directions[i] *= -1.0f;
-			} else if (positions_raw_buffer[index] > 1.0f) {
-				positions_raw_buffer[index] = 1.0f;
+			} else if (positions_raw_buffer[index] > unit_scale) {
+				positions_raw_buffer[index] = unit_scale;
 				directions[i] *= -1.0f;
 			}
 

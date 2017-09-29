@@ -19,6 +19,9 @@
     <ClCompile Include="..\..\sandbox\render_resources.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sandbox\fibers_system.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\sandbox\allocator.h">
@@ -34,6 +37,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sandbox\stb_easy_font.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sandbox\fibers_system.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
