@@ -92,18 +92,23 @@ void update_position_job(void *job_data)
 void recursive_update(void *job_data)
 {
 	UpdatePosition *update_position = job_data;
-	if (update_position->count) {
-		UpdatePosition new_update_position = *update_position;
-		new_update_position.count--;
-		new_update_position.start_entry++;
-		FibersSystemJobDecl job_decl = { .job_entry = recursive_update, .job_data = &new_update_position };
+	FibersSystemCounter *counters[10];
+	UpdatePosition new_update_positions[10];
+	while (update_position->start_entry < update_position->count) {
+		new_update_positions[update_position->start_entry] = *update_position;
+		new_update_positions[update_position->start_entry].count = 1;
+		FibersSystemJobDecl job_decl = { .job_entry = update_position_job, .job_data = &new_update_positions[update_position->start_entry] };
 		FibersSystemCounter *counter = NULL;
-		fibers_system_run_jobs(update_position->fibers_system, &job_decl, 1, &counter);
-		fibers_system_wait_for_counter(update_position->fibers_system, counter, 0);
-	} else
-		return;
+		fibers_system_run_jobs(update_position->fibers_system, &job_decl, 1, &counters[update_position->start_entry]);
+		//fibers_system_wait_for_counter(update_position->fibers_system, counter, 0);
+		update_position->start_entry++;
+	}
 
-	{
+	for (unsigned i = 0; i < 10; ++i) {
+		fibers_system_wait_for_counter(update_position->fibers_system, counters[i], 0);
+	}
+
+	/*{
 		float *positions = update_position->positions;
 		float *directions = update_position->directions;
 		const float dt = update_position->dt;
@@ -120,7 +125,7 @@ void recursive_update(void *job_data)
 		}
 
 		positions[index] += directions[i] * dt;
-	}
+	}*/
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,

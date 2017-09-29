@@ -207,8 +207,10 @@ void fibers_system_run_jobs(FibersSystem *fibers_system, FibersSystemJobDecl *jo
 void fibers_system_wait_for_counter(FibersSystem *fibers_system, FibersSystemCounter *job_counter, unsigned value)
 {
 	unsigned counter_value = InterlockedAdd(&job_counter->counter, 0);
-	if (value == counter_value)
+	if (value == counter_value) {
+		free_job_counter(fibers_system, job_counter);
 		return;
+	}
 
 	FibersSystemWaitList wait_list_entry = { .fiber = GetCurrentFiber(), .counter = job_counter, .expected_value = value };
 	sb_push(fibers_system->wait_list, wait_list_entry);
