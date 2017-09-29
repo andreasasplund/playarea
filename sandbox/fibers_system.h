@@ -10,7 +10,7 @@ typedef void (*FibersSystemJobEntry)(void *data);
 typedef struct FibersSystemJobDecl
 {
 	FibersSystemJobEntry job_entry;
-	void *callback_data;
+	void *job_data;
 } FibersSystemJobDecl;
 
 typedef struct FibersSystemCounter FibersSystemCounter;

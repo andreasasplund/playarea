@@ -56,6 +56,7 @@ int not_quit = 1;
 
 typedef struct UpdatePosition
 {
+	FibersSystem *fibers_system;
 	float *positions;
 	float *directions;
 	float dt;
@@ -63,9 +64,9 @@ typedef struct UpdatePosition
 	unsigned start_entry;
 	unsigned count;
 } UpdatePosition;
-void update_position_job(void *callback_data)
+void update_position_job(void *job_data)
 {
-	UpdatePosition *update_position = callback_data;
+	UpdatePosition *update_position = job_data;
 	float *positions = update_position->positions;
 	float *directions = update_position->directions;
 	const float dt = update_position->dt;
@@ -73,8 +74,42 @@ void update_position_job(void *callback_data)
 	const unsigned count = update_position->count;
 	const unsigned start_entry = update_position->start_entry;
 
-	for (unsigned i = 0; i < count; ++i) {
-		const unsigned index = 2 * (i + start_entry);
+	for (unsigned i = start_entry; i < (start_entry + count); ++i) {
+		const unsigned index = 2 * i;
+		if (positions[index] < -unit_scale) {
+			positions[index] = -unit_scale;
+			directions[i] *= -1.0f;
+		}
+		else if (positions[index] > unit_scale) {
+			positions[index] = unit_scale;
+			directions[i] *= -1.0f;
+		}
+
+		positions[index] += directions[i] * dt;
+	}
+}
+
+void recursive_update(void *job_data)
+{
+	UpdatePosition *update_position = job_data;
+	if (update_position->count) {
+		UpdatePosition new_update_position = *update_position;
+		new_update_position.count--;
+		new_update_position.start_entry++;
+		FibersSystemJobDecl job_decl = { .job_entry = recursive_update, .job_data = &new_update_position };
+		FibersSystemCounter *counter = NULL;
+		fibers_system_run_jobs(update_position->fibers_system, &job_decl, 1, &counter);
+		fibers_system_wait_for_counter(update_position->fibers_system, counter, 0);
+	} else
+		return;
+
+	{
+		float *positions = update_position->positions;
+		float *directions = update_position->directions;
+		const float dt = update_position->dt;
+		const float unit_scale = update_position->unit_scale;
+		const unsigned i = update_position->start_entry;
+		const unsigned index = 2 * i;
 		if (positions[index] < -unit_scale) {
 			positions[index] = -unit_scale;
 			directions[i] *= -1.0f;
@@ -345,17 +380,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		Timer update_pos_timer;
 		delta_time(&update_pos_timer);
-		UpdatePosition job_data[n_instances];// = { .positions = positions_raw_buffer,.directions = directions,.dt = smoothed_dt,.unit_scale = unit_scale,.start_entry = 0,.count = 1 };
+		UpdatePosition job_data[n_instances];
 		FibersSystemJobDecl job_decls[n_instances];
-		for (unsigned i = 0; i < n_instances; ++i) {
-			UpdatePosition data = { .positions = positions_raw_buffer,.directions = directions,.dt = smoothed_dt,.unit_scale = unit_scale,.start_entry = i,.count = 1 };
+		/*for (unsigned i = 0; i < n_instances; ++i) */{
+			unsigned i = 0;
+			UpdatePosition data = { .fibers_system = program.fibers_system, .positions = positions_raw_buffer,.directions = directions,.dt = smoothed_dt,.unit_scale = unit_scale,.start_entry = 0,.count = 10 };
 			job_data[i] = data;
-			job_decls[i].job_entry = update_position_job;
-			job_decls[i].callback_data = &job_data[i];
+			job_decls[i].job_entry = recursive_update;
+			job_decls[i].job_data = &job_data[i];
 		}
-		//FibersSystemJobDecl job_decl = { .job_entry = update_position_job, .callback_data = &job_data };
+
 		FibersSystemCounter *job_counter = NULL;
-		fibers_system_run_jobs(program.fibers_system, job_decls, n_instances, &job_counter);
+		fibers_system_run_jobs(program.fibers_system, job_decls, 1, &job_counter);
 		fibers_system_wait_for_counter(program.fibers_system, job_counter, 0);
 		
 

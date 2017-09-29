@@ -53,13 +53,19 @@ typedef struct FibersSystem
 FiberStruct *allocate_fiber(FibersSystem *fibers_system)
 {
 	assert(sb_count(fibers_system->free_fibers) > 0);
+	const unsigned last_slot = sb_count(fibers_system->free_fibers) - 1;
 	unsigned free_fiber = sb_last(fibers_system->free_fibers);
+	fibers_system->free_fibers[last_slot] = 0xffffffffu;
 	sb_pop(fibers_system->free_fibers);
 	return &fibers_system->fibers[free_fiber];
 }
 
 void free_fiber(FibersSystem *fibers_system, FiberStruct *fiber)
 {
+	fiber->current_job.counter = NULL;
+	fiber->current_job.declaration.job_entry = NULL;
+	fiber->current_job.declaration.job_data = NULL;
+
 	assert(sb_count(fibers_system->free_fibers) < sb_count(fibers_system->fibers));
 	unsigned free_fiber = fiber->entry;
 	sb_push(fibers_system->free_fibers, free_fiber);
@@ -67,36 +73,32 @@ void free_fiber(FibersSystem *fibers_system, FiberStruct *fiber)
 
 void fibers_system_do_work(FibersSystem *fibers_system)
 {
-	//BOOL do_work = TRUE;
-	/*while (do_work) */{
-		// Go over all fibers in wait list and see if any is done, if so, switch to that fiber.
-		const unsigned n_wait_list_entries = sb_count(fibers_system->wait_list);
-		for (unsigned int i = 0; i < n_wait_list_entries; ++i) {
-			FibersSystemWaitList *waiting = &fibers_system->wait_list[i];
-			unsigned counter_value = InterlockedAdd(&waiting->counter->counter, 0);
-			if (waiting->expected_value != counter_value)
-				continue;
+	// Go over all fibers in wait list and see if any is done, if so, switch to that fiber.
+	const unsigned n_wait_list_entries = sb_count(fibers_system->wait_list);
+	for (unsigned int i = 0; i < n_wait_list_entries; ++i) {
+		FibersSystemWaitList *waiting = &fibers_system->wait_list[i];
+		unsigned counter_value = InterlockedAdd(&waiting->counter->counter, 0);
+		if (waiting->expected_value != counter_value)
+			continue;
 
-			FibersSystemWaitList done = *waiting;
-			fibers_system->wait_list[i] = sb_last(fibers_system->wait_list);
-			sb_pop(fibers_system->wait_list);
+		FibersSystemWaitList done = *waiting;
+		fibers_system->wait_list[i] = sb_last(fibers_system->wait_list);
+		sb_pop(fibers_system->wait_list);
 
-			SwitchToFiber(done.fiber);
-			//do_work = FALSE;
-			//break;
-			break;
-		}
-		/*if (do_work == FALSE)
-			return;*/
+		SwitchToFiber(done.fiber);
+		return;
+	}
 
-		// Couldn't find a fiber that is done, proceed with consuming jobs from the job queue.
-		while (sb_count(fibers_system->jobs)) {
-			FibersSystemJob job = sb_last(fibers_system->jobs);
-			sb_pop(fibers_system->jobs);
-			FiberStruct *fiber = allocate_fiber(fibers_system);
-			fiber->current_job = job;
-			SwitchToFiber(fiber->fiber);
-		}
+	// Couldn't find a fiber that is done, proceed with consuming jobs from the job queue.
+	while (sb_count(fibers_system->jobs)) {
+		FibersSystemJob job = sb_last(fibers_system->jobs);
+		sb_pop(fibers_system->jobs);
+		FiberStruct *fiber = allocate_fiber(fibers_system);
+		fiber->current_job = job;
+
+		if (fiber->fiber == GetCurrentFiber())
+			return;
+		SwitchToFiber(fiber->fiber);
 	}
 }
 
@@ -106,8 +108,11 @@ void fiber_entry_point(LPVOID fiber_param)
 
 	while (1) {
 		FibersSystemJob current_job = fiber_struct->current_job;
-		(*current_job.declaration.job_entry)(current_job.declaration.callback_data);
-		InterlockedDecrement(&current_job.counter->counter);
+
+		if (current_job.counter && current_job.declaration.job_entry && current_job.declaration.job_data) {
+			(*current_job.declaration.job_entry)(current_job.declaration.job_data);
+			InterlockedDecrement(&current_job.counter->counter);
+		}
 
 		free_fiber(fiber_struct->fibers_system, fiber_struct);
 		fibers_system_do_work(fiber_struct->fibers_system);
